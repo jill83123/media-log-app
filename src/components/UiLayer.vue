@@ -92,7 +92,7 @@ function submit() {
     </Transition>
 
     <div
-      class="pointer-events-none fixed inset-x-0 bottom-24 z-[70] flex flex-col items-center gap-2 px-4"
+      class="pointer-events-none fixed inset-x-0 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-[70] flex flex-col items-center gap-2 px-4"
     >
       <TransitionGroup name="sheet">
         <div
