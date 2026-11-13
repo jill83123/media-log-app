@@ -20,7 +20,7 @@ export default defineConfig({
       manifest: {
         name: '書影紀錄',
         short_name: '書影紀錄',
-        description: '離線優先、可同步到 Google 試算表的書影紀錄 App',
+        description: '離線優先、可同步到 Google 雲端硬碟的書影紀錄 App',
         lang: 'zh-Hant',
         theme_color: '#fdfdfe',
         background_color: '#fdfdfe',
