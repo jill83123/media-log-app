@@ -40,7 +40,7 @@ const groups = computed(() => [
 </script>
 
 <template>
-  <header class="relative -mx-4 mb-3 flex min-h-14 items-center justify-center bg-bg px-4 py-2"><h1 class="text-xl font-bold">設定</h1></header>
+  <header class="sticky-header"><h1 class="text-xl font-bold">設定</h1></header>
   <template v-for="g in groups" :key="g.title">
     <h2 class="section-title">{{ g.title }}</h2>
     <ul class="card inset-divide mb-5 overflow-hidden p-0">
