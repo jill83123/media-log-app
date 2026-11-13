@@ -42,6 +42,12 @@ const defaultText = computed(() => {
   const p = progress.value
   return p.infinite || !p.total ? `${p.unit}（不限）` : `共 ${p.total} ${p.unit}`
 })
+/** 2026/11/12 14:05 */
+const stamp = (t: number) => {
+  const d = new Date(t)
+  const z = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}/${z(d.getMonth() + 1)}/${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`
+}
 const typeLabel = computed(() => (form.value.type ? typeLabelOf(form.value.type) : ''))
 
 function openSearch() {
@@ -130,7 +136,7 @@ async function removeThis() {
   <div class="space-y-4 pb-2">
     <!-- the cover with the two fields the search fills in -->
     <div class="flex gap-4">
-      <div class="w-28 shrink-0 space-y-2">
+      <div class="w-28 shrink-0">
         <button type="button" class="block rounded-xl transition active:scale-[0.97]" aria-label="編輯圖片" @click="coverMenu = true">
           <WorkCover :src="form.cover" :title="form.title || '封面'" class="h-40 w-28 shadow-sm" />
         </button>
@@ -180,6 +186,10 @@ async function removeThis() {
         </button>
       </li>
     </ul>
+    <p v-if="editingId && form.updatedAt" class="px-1 text-xs leading-5 text-muted">
+      <span v-if="form.createdAt" class="block">建立 {{ stamp(form.createdAt) }}</span>
+      <span v-if="!form.createdAt || stamp(form.updatedAt) !== stamp(form.createdAt)" class="block">更新 {{ stamp(form.updatedAt) }}</span>
+    </p>
   </div>
 
   <NamePickSheet v-model:open="tagsOpen" v-model="form.tagIds" title="標籤" multiple :items="tagItems" :create="createTag" />
@@ -198,7 +208,7 @@ async function removeThis() {
   <CoverSearchSheet v-model:open="coverSearchOpen" cover-only :query="form.title" :type="form.type" @pick="applyFound" />
   <CoverSearchSheet v-model:open="searchOpen" :query="form.title" :type="form.type" @pick="applyFound" />
 
-  <div class="mt-5 flex gap-3">
+  <div class="mt-4 flex gap-3">
     <button v-if="editingId" class="btn btn-ghost shrink-0 px-3.5 text-sm text-danger" @click="removeThis">刪除</button>
     <button class="btn btn-primary min-w-0 flex-1" @click="save">儲存</button>
   </div>
