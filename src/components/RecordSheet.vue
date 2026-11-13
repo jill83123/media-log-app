@@ -12,7 +12,6 @@ import PopupDialog from './PopupDialog.vue'
 import FuzzyDateField from './FuzzyDateField.vue'
 import RatingList from './RatingList.vue'
 import RatingStars from './RatingStars.vue'
-import ToggleSwitch from './ToggleSwitch.vue'
 
 const props = defineProps<{ record: Rec; removable?: boolean }>()
 const emit = defineEmits<{ remove: [] }>()
@@ -86,16 +85,22 @@ async function save() {
       </div>
 
       <div>
-        <div class="mb-1.5 flex items-center justify-between">
-          <span class="label !mb-0">總進度／單位</span>
-          <label class="flex items-center gap-2 text-xs text-muted">無限進度（連載中）<ToggleSwitch v-model="draft.progress.infinite" /></label>
-        </div>
         <div class="grid grid-cols-2 gap-3">
-          <input class="input disabled:opacity-40" inputmode="numeric" :disabled="draft.progress.infinite" :value="draft.progress.total" @input="setTotal(digits($event))" />
-          <button class="input flex items-center justify-between" @click="unitOpen = true">
-            <span class="truncate">{{ draft.progress.unit }}</span>
-          </button>
+          <div>
+            <span class="label">總進度</span>
+            <input class="input disabled:opacity-40" inputmode="numeric" :disabled="draft.progress.infinite" :value="draft.progress.total" @input="setTotal(digits($event))" />
+          </div>
+          <div>
+            <span class="label">單位</span>
+            <button class="input flex w-full items-center justify-between" @click="unitOpen = true">
+              <span class="truncate">{{ draft.progress.unit }}</span>
+            </button>
+          </div>
         </div>
+        <button type="button" role="checkbox" :aria-checked="draft.progress.infinite" class="-mb-1 mt-2 flex items-center gap-2 px-1 text-xs text-muted" @click="draft.progress.infinite = !draft.progress.infinite">
+          <span class="flex size-4 items-center justify-center rounded border" :class="draft.progress.infinite ? 'border-primary bg-primary text-white' : 'border-line bg-surface'"><Check v-if="draft.progress.infinite" :size="12" /></span>
+          無限進度（連載中）
+        </button>
         <p v-if="progressError" class="mt-1.5 px-1 text-sm text-danger">{{ progressError }}</p>
       </div>
 

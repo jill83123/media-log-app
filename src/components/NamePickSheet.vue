@@ -42,17 +42,17 @@ function none() {
 <template>
   <BottomSheet v-model="open" :title="title">
     <form class="mb-3 flex gap-2" @submit.prevent="add">
-      <input v-model="text" class="input" placeholder="新增…" />
+      <input v-model="text" class="input" placeholder="輸入名稱" />
       <button class="btn btn-primary shrink-0 px-4" :disabled="!text.trim()"><Plus :size="18" /></button>
     </form>
     <ul v-if="items.length || noneLabel" class="card divide-y divide-line p-0">
       <li v-if="noneLabel">
-        <button class="flex w-full items-center px-4 py-3 text-left text-muted" @click="none">
+        <button class="flex w-full items-center px-4 py-3 text-left text-base text-muted" @click="none">
           <span class="flex-1">{{ noneLabel }}</span><Check v-if="!model.length" :size="18" class="text-primary" />
         </button>
       </li>
       <li v-for="it in items" :key="it.id">
-        <button class="flex w-full items-center px-4 py-3 text-left" :style="{ paddingLeft: `${1 + (it.indent ?? 0) * 1.25}rem` }" @click="toggle(it.id)">
+        <button class="flex w-full items-center px-4 py-3 text-left text-base" :style="{ paddingLeft: `${1 + (it.indent ?? 0) * 1.25}rem` }" @click="toggle(it.id)">
           <span class="flex-1">{{ it.name }}</span>
           <Check v-if="model.includes(it.id)" :size="18" class="text-primary" />
         </button>

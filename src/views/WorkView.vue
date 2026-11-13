@@ -290,9 +290,9 @@ async function removeDay() {
               </span>
             </button>
             <!-- progress sits inside the round it belongs to: - / + change it right away, tapping the number types one in -->
-            <div v-if="r.id === latest_?.id" class="mt-1 -mb-1.5 flex items-center gap-4">
+            <div v-if="r.id === latest_?.id" class="-mt-1 -mb-1.5 flex items-center gap-4">
               <button class="shrink-0 text-base font-bold" @click="progressOpen = true">{{ progressText(r.progress) }}</button>
-              <span class="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-line"><span class="block h-full bg-primary" :style="{ width: `${progressRatio(r.progress) * 100}%` }" /></span>
+              <button class="flex min-w-0 flex-1 items-center self-stretch py-3" aria-label="輸入進度" @click="progressOpen = true"><span class="h-1 w-full overflow-hidden rounded-full bg-line"><span class="block h-full bg-primary" :style="{ width: `${progressRatio(r.progress) * 100}%` }" /></span></button>
               <button class="icon-btn border-0 disabled:opacity-30" :disabled="r.progress.current <= 0" aria-label="減一" @click="nudge(-1)"><Minus :size="18" /></button>
               <button class="icon-btn border-0 disabled:opacity-30" :disabled="r.progress.current >= topOf(r.progress)" aria-label="加一" @click="nudge(1)"><Plus :size="18" /></button>
             </div>
@@ -344,7 +344,7 @@ async function removeDay() {
       <div class="mb-3 flex justify-end px-1 text-xs text-muted">
         <button class="flex items-center gap-1" @click="newNote(tab === 'memo' ? 'note' : undefined)"><Plus :size="13" />{{ tab === 'memo' ? '寫筆記' : '寫心得' }}</button>
       </div>
-      <p v-if="!noteList.length" class="py-8 text-center text-sm text-muted">{{ tab === 'memo' ? '還沒有筆記，看到哪、想到什麼都可以隨手記。' : '還沒有心得，想到什麼都可以隨時寫。' }}</p>
+      <p v-if="!noteList.length" class="py-16 text-center text-sm text-muted">{{ tab === 'memo' ? '還沒有筆記，看到哪、想到什麼都可以隨手記。' : '還沒有心得，想到什麼都可以隨時寫。' }}</p>
       <ul class="space-y-2.5">
         <li v-for="n in noteList" :key="n.note.id">
           <button class="card w-full text-left" @click="editNote(n.note)">
@@ -379,6 +379,10 @@ async function removeDay() {
       <form v-if="dayRec" class="card w-full max-w-[21rem] space-y-4 p-5 shadow-xl" role="dialog" aria-label="每日進度" @submit.prevent="saveDay">
         <h2 class="text-lg leading-snug font-bold">{{ dayLogId ? '編輯這天' : '補記一天' }}</h2>
         <FuzzyDateField v-model="dayDate" label="日期" day-only :max="today()" />
+        <label class="block">
+          <span class="label">從哪開始（選填）</span>
+          <input class="input text-center" inputmode="numeric" placeholder="不確定就留空，只記看到哪" :value="dayFrom" @input="dayFrom = ($event.target as HTMLInputElement).value.replace(/\D/g, '')" />
+        </label>
         <div>
           <span class="label">看到（{{ dayRec.progress.unit }}）</span>
           <div class="flex items-center gap-3">
@@ -387,10 +391,6 @@ async function removeDay() {
             <button type="button" class="icon-btn border-0 bg-transparent" aria-label="加一" @click="dayValue++"><Plus :size="18" /></button>
           </div>
         </div>
-        <label class="block">
-          <span class="label">從哪開始（選填）</span>
-          <input class="input text-center" inputmode="numeric" placeholder="不確定就留空，只記看到哪" :value="dayFrom" @input="dayFrom = ($event.target as HTMLInputElement).value.replace(/\D/g, '')" />
-        </label>
         <p v-if="dayError" class="text-sm text-danger">{{ dayError }}</p>
         <div class="flex gap-2">
           <button v-if="dayLogId" type="button" class="btn btn-ghost shrink-0 px-3.5 text-sm text-danger" @click="removeDay">刪除</button>
