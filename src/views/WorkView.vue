@@ -223,6 +223,15 @@ async function saveDay() {
   // moving an entry to another day: the old one goes away (the new day's entry, if any, is replaced)
   if (dayLogId.value && dayLogId.value !== progressLogId(r.id, dayDate.value)) await remove('progressLogs', dayLogId.value)
   await logProgress(r, dayValue.value, dayDate.value, dayFrom.value === '' ? undefined : Number(dayFrom.value))
+  // the round stands where its latest day says: an entry on (or after) the newest day moves the current progress too
+  const newest = data.progressLogs.every((l) => l.recordId !== r.id || l.id === progressLogId(r.id, dayDate.value) || l.date <= dayDate.value)
+  if (newest && dayValue.value !== r.progress.current) {
+    const v = dayValue.value
+    const p = r.progress
+    const reachedEnd = !p.infinite && p.total > 0 && v >= p.total
+    const status = reachedEnd ? 'done' : r.status === 'done' && !p.infinite && p.total > 0 ? 'doing' : r.status === 'todo' && v > 0 ? 'doing' : r.status
+    await put('records', { ...r, progress: { ...p, current: v }, status, end: status === 'done' ? r.end || dayDate.value : status === 'doing' && r.status === 'done' ? '' : r.end, start: status !== 'todo' ? r.start || dayDate.value : r.start, updatedAt: Date.now() })
+  }
   dayOpen.value = false
 }
 async function removeDay() {
