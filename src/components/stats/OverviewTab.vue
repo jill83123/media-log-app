@@ -62,7 +62,7 @@ const maxDist = computed(() => Math.max(1, ...props.summary.distribution.map((d)
     <ul class="card divide-y divide-line p-0">
       <li v-for="i in listItems" :key="i.record.id">
         <RouterLink :to="`/work/${i.work.id}`" class="flex items-center gap-3 px-4 py-3">
-          <WorkCover :src="i.work.cover" :title="i.work.title" :icon-size="13" class="h-[52px] w-[39px] shrink-0" />
+          <WorkCover :src="i.work.cover" :title="i.work.title" :icon-size="13" class="h-[52px] w-[37px] shrink-0" />
           <span class="min-w-0 flex-1">
             <span class="block truncate font-medium">{{ i.work.title }}</span>
             <span class="block truncate text-xs text-muted">{{ typeLabel(i.work.type) }}</span>

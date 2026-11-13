@@ -122,7 +122,7 @@ watch(year, jump)
     <ul class="space-y-3">
       <li v-for="r in rows" :key="r.work.id">
         <RouterLink :to="`/work/${r.work.id}`" class="flex items-center gap-3 text-sm">
-          <WorkCover :src="r.work.cover" :title="r.work.title" class="h-12 w-9 shrink-0" />
+          <WorkCover :src="r.work.cover" :title="r.work.title" class="h-12 w-[34px] shrink-0" />
           <span class="min-w-0 flex-1 truncate">{{ r.work.title }}</span>
           <span v-if="r.labels.length" class="max-w-[45%] shrink-0 text-right text-xs text-muted">{{ r.labels.join('、') }}</span>
         </RouterLink>

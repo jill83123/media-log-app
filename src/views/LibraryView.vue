@@ -200,7 +200,7 @@ const ratingSteps = computed(() => [0, ...mergeRatings(settings.s.ratings).map((
   <ul v-if="tagName" class="space-y-2.5">
     <li v-for="{ work: w, rating } in tagWorks" :key="w.id">
       <RouterLink :to="`/work/${w.id}`" class="card flex h-[72px] items-center gap-3 overflow-hidden px-3">
-        <WorkCover :src="w.cover" :title="w.title" :icon-size="13" class="h-[52px] w-[39px] shrink-0" />
+        <WorkCover :src="w.cover" :title="w.title" :icon-size="13" class="h-[52px] w-[37px] shrink-0" />
         <div class="min-w-0 flex-1">
           <p class="truncate text-sm leading-tight font-medium">{{ w.title }}</p>
           <p v-if="w.creators" class="mt-px truncate text-xs leading-tight text-muted">{{ w.creators }}</p>
@@ -217,7 +217,7 @@ const ratingSteps = computed(() => [0, ...mergeRatings(settings.s.ratings).map((
       <ul class="space-y-2.5">
         <li v-for="{ work, record, rounds } in g.items" :key="work.id + (record?.id ?? '')">
           <RouterLink :to="`/work/${work.id}`" class="card flex h-[72px] items-center gap-3 overflow-hidden px-3">
-            <WorkCover :src="work.cover" :title="work.title" :icon-size="13" class="h-[52px] w-[39px] shrink-0" />
+            <WorkCover :src="work.cover" :title="work.title" :icon-size="13" class="h-[52px] w-[37px] shrink-0" />
             <div class="min-w-0 flex-1">
               <p class="truncate text-sm leading-tight font-medium">{{ work.title }}</p>
               <p v-if="metaLine(work, record, rounds)" class="mt-px text-xs leading-tight text-muted">{{ metaLine(work, record, rounds) }}</p>
@@ -243,7 +243,7 @@ const ratingSteps = computed(() => [0, ...mergeRatings(settings.s.ratings).map((
     <li v-for="{ work, record, rounds } in rows" :key="work.id + (record?.id ?? '')">
       <RouterLink :to="`/work/${work.id}`" class="block transition active:scale-95">
         <div class="relative">
-          <WorkCover :src="work.cover" :title="work.title" class="aspect-[3/4] w-full" :class="work.cover && 'shadow-sm'" />
+          <WorkCover :src="work.cover" :title="work.title" class="aspect-[7/10] w-full" :class="work.cover && 'shadow-sm'" />
           <!-- one look for both labels: dark, see-through and white text reads on any cover -->
           <div class="absolute bottom-1.5 left-1.5 flex items-center gap-1">
             <span class="rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] leading-none font-semibold text-white backdrop-blur-sm">{{ statusLabel(record?.status ?? 'todo') }}</span>

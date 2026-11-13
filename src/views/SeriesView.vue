@@ -205,7 +205,7 @@ async function del() {
       @click.capture="swallowClick"
     >
       <RouterLink v-if="view === 'list'" :to="`/work/${work.id}`" draggable="false" class="card flex h-16 items-center gap-3 overflow-hidden px-3 transition-[scale,box-shadow,background-color] duration-200">
-        <WorkCover :src="work.cover" :title="work.title" :icon-size="13" class="h-11 w-[33px] shrink-0" />
+        <WorkCover :src="work.cover" :title="work.title" :icon-size="13" class="h-11 w-[31px] shrink-0" />
         <p class="min-w-0 flex-1 truncate text-sm font-medium">{{ work.title }}</p>
         <div class="flex shrink-0 flex-col items-end gap-1 text-xs">
           <StatusPill v-if="record" :status="record.status" />
@@ -214,7 +214,7 @@ async function del() {
       </RouterLink>
       <RouterLink v-else :to="`/work/${work.id}`" draggable="false" class="block transition-[scale] duration-200">
         <div class="lift relative rounded-xl transition-shadow duration-200" :class="work.cover && 'shadow-sm'">
-          <WorkCover :src="work.cover" :title="work.title" class="aspect-[3/4] w-full" />
+          <WorkCover :src="work.cover" :title="work.title" class="aspect-[7/10] w-full" />
           <span class="absolute bottom-1.5 left-1.5 rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] leading-none font-semibold text-white backdrop-blur-sm">{{ statusLabel(record?.status ?? 'todo') }}</span>
         </div>
         <p class="mt-1.5 line-clamp-2 text-xs leading-snug font-medium">{{ work.title }}</p>
