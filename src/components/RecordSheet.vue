@@ -68,7 +68,7 @@ async function save() {
 <template>
   <PopupDialog v-model="open" no-focus>
     <div class="card max-h-[calc(var(--pop-h,100dvh)-2rem)] w-full max-w-[23rem] space-y-4 overflow-y-auto p-5 shadow-xl" role="dialog" aria-label="編輯記錄">
-      <h2 class="pb-1 text-lg leading-snug font-bold">編輯記錄<span class="ml-1.5 text-sm font-normal text-muted">（{{ draft.round }} 刷）</span></h2>
+      <h2 class="pb-1 text-lg leading-snug font-bold">編輯記錄（{{ draft.round }} 刷）</h2>
       <div>
         <span class="label">狀態</span>
         <div class="flex flex-wrap gap-2">
@@ -104,7 +104,7 @@ async function save() {
         <p v-if="progressError" class="mt-1.5 px-1 text-sm text-danger">{{ progressError }}</p>
       </div>
 
-      <div class="grid grid-cols-2 gap-3">
+      <div class="space-y-4">
         <FuzzyDateField v-model="draft.start" label="開始" />
         <FuzzyDateField v-model="draft.end" label="結束" />
       </div>

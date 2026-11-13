@@ -308,11 +308,11 @@ async function removeDay() {
             <button class="flex w-full items-center gap-3 text-left" @click="editRound(r)">
               <span class="min-w-0 flex-1">
                 <span class="flex items-center gap-2">
-                  <span v-if="rounds.length > 1" class="text-sm font-semibold">{{ r.round }} 刷</span>
+                  <span v-if="rounds.length > 1" class="text-sm font-medium">{{ r.round }} 刷</span>
                   <StatusPill :status="r.status" />
                   <span v-if="r.rating != null && showsProgress(r)" class="ml-auto flex shrink-0 items-center gap-1 font-semibold text-warn"><Star :size="14" :stroke-width="0" fill="currentColor" />{{ formatRating(r.rating) }}</span>
                 </span>
-                <span class="mt-1.5 flex items-baseline justify-between gap-3 text-xs text-muted">
+                <span class="mt-2 flex items-baseline justify-between gap-3 text-xs text-muted">
                   <span>{{ formatFuzzy(r.start, '未填開始') }} → {{ formatFuzzy(r.end, '進行中') }}<template v-if="r.end && formatSpan(r.start, r.end)">（{{ formatSpan(r.start, r.end) }}）</template></span>
                   <span v-if="showsProgress(r)" class="shrink-0 font-semibold">{{ progressText(r.progress) }}</span>
                 </span>
@@ -321,11 +321,11 @@ async function removeDay() {
               <span v-if="r.rating != null && !showsProgress(r)" class="flex shrink-0 items-center gap-1 font-semibold text-warn"><Star :size="14" :stroke-width="0" fill="currentColor" />{{ formatRating(r.rating) }}</span>
             </button>
             <!-- progress sits inside the round it belongs to: - / + change it right away, tapping the number types one in -->
-            <div v-if="r.id === latest_?.id" class="-mt-1 -mb-1.5 flex items-center gap-4">
-              <button class="shrink-0 text-base font-bold" @click="progressOpen = true">{{ progressText(r.progress) }}</button>
-              <button class="flex min-w-0 flex-1 items-center self-stretch py-3" aria-label="輸入進度" @click="progressOpen = true"><span class="h-1 w-full overflow-hidden rounded-full bg-line"><span class="block h-full bg-primary" :style="{ width: `${progressRatio(r.progress) * 100}%` }" /></span></button>
-              <button class="icon-btn border-0 disabled:opacity-30" :disabled="r.progress.current <= 0" aria-label="減一" @click="nudge(-1)"><Minus :size="18" /></button>
-              <button class="icon-btn border-0 disabled:opacity-30" :disabled="r.progress.current >= topOf(r.progress)" aria-label="加一" @click="nudge(1)"><Plus :size="18" /></button>
+            <div v-if="r.id === latest_?.id" class="-mb-1.5 flex items-center gap-3">
+              <button class="shrink-0 text-sm font-semibold" @click="progressOpen = true">{{ progressText(r.progress) }}</button>
+              <button class="flex min-w-0 flex-1 items-center self-stretch py-2.5" aria-label="輸入進度" @click="progressOpen = true"><span class="h-1.5 w-full overflow-hidden rounded-full bg-line"><span class="block h-full bg-primary" :style="{ width: `${progressRatio(r.progress) * 100}%` }" /></span></button>
+              <button class="icon-btn size-9 border-0 disabled:opacity-30" :disabled="r.progress.current <= 0" aria-label="減一" @click="nudge(-1)"><Minus :size="16" /></button>
+              <button class="icon-btn size-9 border-0 disabled:opacity-30" :disabled="r.progress.current >= topOf(r.progress)" aria-label="加一" @click="nudge(1)"><Plus :size="16" /></button>
             </div>
           </div>
         </li>
@@ -377,7 +377,7 @@ async function removeDay() {
         <button class="flex items-center gap-1" @click="newNote(tab === 'memo' ? 'note' : undefined)"><Plus :size="13" />{{ tab === 'memo' ? '寫筆記' : '寫心得' }}</button>
       </div>
       <p v-if="!noteList.length" class="py-16 text-center text-sm text-muted">{{ tab === 'memo' ? '還沒有筆記，看到哪、想到什麼都可以隨手記。' : '還沒有心得，想到什麼都可以隨時寫。' }}</p>
-      <ul class="space-y-2.5">
+      <ul class="space-y-3">
         <li v-for="n in noteList" :key="n.note.id">
           <button class="card w-full text-left" @click="editNote(n.note)">
             <div class="flex items-center gap-2 text-xs text-muted">
@@ -385,7 +385,7 @@ async function removeDay() {
               <span>{{ formatFuzzy(n.note.date) }}</span>
               <span v-if="n.note.progress != null" class="ml-auto">{{ noteProgress(n.note) }}</span>
             </div>
-            <p class="mt-2 font-semibold" :class="!n.note.title && 'font-normal text-muted'">{{ n.note.title || '無標題' }}</p>
+            <p class="mt-1.5 font-medium" :class="!n.note.title && 'font-normal text-muted'">{{ n.note.title || '無標題' }}</p>
             <p class="text-sm leading-6 whitespace-pre-wrap" :class="[n.note.title ? 'mt-1' : 'mt-0',!openBodies[n.note.id] && 'line-clamp-5']" @click="tapBody($event, n.note.id)">{{ n.note.body }}</p>
           </button>
         </li>
@@ -394,11 +394,11 @@ async function removeDay() {
 
     <PopupDialog v-model="progressOpen">
       <form v-if="latest_" class="card w-full max-w-[21rem] space-y-4 p-5 shadow-xl" role="dialog" aria-label="進度" @submit.prevent="saveDrawer">
-        <h2 class="text-lg leading-snug font-bold">進度<span v-if="!latest_.progress.infinite && latest_.progress.total > 0" class="ml-1.5 text-sm font-normal text-muted">（共 {{ latest_.progress.total }} {{ latest_.progress.unit }}）</span></h2>
-        <div class="flex items-center gap-3">
-          <button type="button" class="icon-btn border-0 bg-transparent disabled:opacity-30" aria-label="減一" :disabled="drawerValue <= 0" @click="drawerValue--"><Minus :size="18" /></button>
-          <input class="input min-w-0 flex-1 text-center" inputmode="numeric" :value="drawerValue" @input="setDrawer(Number(($event.target as HTMLInputElement).value.replace(/\D/g, '')) || 0, $event.target as HTMLInputElement)" />
-          <button type="button" class="icon-btn border-0 bg-transparent disabled:opacity-30" aria-label="加一" :disabled="!!latest_ && drawerValue >= topOf(latest_.progress)" @click="setDrawer(drawerValue + 1)"><Plus :size="18" /></button>
+        <h2 class="text-lg leading-snug font-bold">進度<template v-if="!latest_.progress.infinite && latest_.progress.total > 0">（共 {{ latest_.progress.total }} {{ latest_.progress.unit }}）</template></h2>
+        <div class="relative">
+          <button type="button" class="icon-btn absolute top-1/2 left-1 -translate-y-1/2 border-0 bg-transparent disabled:opacity-30" aria-label="減一" :disabled="drawerValue <= 0" @click="drawerValue--"><Minus :size="18" /></button>
+          <input class="input w-full px-12 text-center" inputmode="numeric" :value="drawerValue" @input="setDrawer(Number(($event.target as HTMLInputElement).value.replace(/\D/g, '')) || 0, $event.target as HTMLInputElement)" />
+          <button type="button" class="icon-btn absolute top-1/2 right-1 -translate-y-1/2 border-0 bg-transparent disabled:opacity-30" aria-label="加一" :disabled="!!latest_ && drawerValue >= topOf(latest_.progress)" @click="setDrawer(drawerValue + 1)"><Plus :size="18" /></button>
         </div>
         <div class="grid grid-cols-[auto_1fr] gap-2">
           <button type="button" class="btn btn-ghost px-5 disabled:opacity-40" :disabled="drawerValue === latest_.progress.current" @click="drawerValue = latest_.progress.current">重置</button>
@@ -417,13 +417,13 @@ async function removeDay() {
         </label>
         <div>
           <span class="label">看到（{{ dayRec.progress.unit }}）</span>
-          <div class="flex items-center gap-3">
-            <button type="button" class="icon-btn border-0 bg-transparent disabled:opacity-30" aria-label="減一" :disabled="dayValue <= 0" @click="dayValue--"><Minus :size="18" /></button>
-            <input class="input min-w-0 flex-1 text-center" inputmode="numeric" :value="dayValue" @input="dayValue = Number(($event.target as HTMLInputElement).value.replace(/\D/g, '')) || 0" />
-            <button type="button" class="icon-btn border-0 bg-transparent" aria-label="加一" @click="dayValue++"><Plus :size="18" /></button>
+          <div class="relative">
+            <button type="button" class="icon-btn absolute top-1/2 left-1 -translate-y-1/2 border-0 bg-transparent disabled:opacity-30" aria-label="減一" :disabled="dayValue <= 0" @click="dayValue--"><Minus :size="18" /></button>
+            <input class="input w-full px-12 text-center" inputmode="numeric" :value="dayValue" @input="dayValue = Number(($event.target as HTMLInputElement).value.replace(/\D/g, '')) || 0" />
+            <button type="button" class="icon-btn absolute top-1/2 right-1 -translate-y-1/2 border-0 bg-transparent" aria-label="加一" @click="dayValue++"><Plus :size="18" /></button>
           </div>
+          <p v-if="dayError" class="mt-1.5 text-sm text-danger">{{ dayError }}</p>
         </div>
-        <p v-if="dayError" class="text-sm text-danger">{{ dayError }}</p>
         <div class="flex gap-2">
           <button v-if="dayLogId" type="button" class="btn btn-ghost shrink-0 px-3.5 text-sm text-danger" @click="removeDay">刪除</button>
           <button type="submit" class="btn btn-primary min-w-0 flex-1 disabled:opacity-40" :disabled="!!dayError">儲存</button>
