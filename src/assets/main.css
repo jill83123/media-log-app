@@ -257,6 +257,18 @@ input[type='number'] {
   }
 }
 
+/* no browser ghost-image drag on covers and links, it steals the swipe/scroll gesture */
+a,
+img {
+  -webkit-user-drag: none;
+}
+
+/* while a row is being dragged, every element shows the grabbing hand (buttons would otherwise show their own) */
+body.is-reordering,
+body.is-reordering * {
+  cursor: grabbing !important;
+}
+
 /* rows that can be dragged sideways with a mouse (lib/dragScroll.ts) */
 [data-drag-scroll],
 [data-drag-scroll] * {

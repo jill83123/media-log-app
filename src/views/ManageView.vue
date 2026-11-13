@@ -8,6 +8,7 @@ import { createSeries, createTag, put, removeSeries, removeTag } from '@/lib/rep
 import { GripVertical, Plus } from '@/lib/uiIcons'
 import PopupDialog from '@/components/PopupDialog.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import { animateReorder, followPointer, rowAt } from '@/lib/reorderAnim'
 
 /** Rename / delete / add tags and series. */
 const route = useRoute()
@@ -39,6 +40,7 @@ const dragList = ref<Row[] | null>(null)
 const dragging = ref('')
 const shown = computed(() => dragList.value ?? rows.value)
 const box = ref<HTMLElement>()
+animateReorder(box, shown)
 const groupLabel = (g: string) => (g ? typeLabel(g) : '未分類')
 const startsGroup = (list: Row[], i: number) => kind.value === 'series' && list[i]!.group !== list[i - 1]?.group
 const blockEnd = (list: Row[], i: number) => {
@@ -46,18 +48,24 @@ const blockEnd = (list: Row[], i: number) => {
   while (j < list.length && list[j]!.depth > list[i]!.depth) j++
   return j
 }
+let follow: ReturnType<typeof followPointer> | undefined
 function dragStart(e: PointerEvent, id: string) {
+  follow = followPointer(e.currentTarget as HTMLElement, e)
   dragList.value = [...rows.value]
   dragging.value = id
-  ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+  // listen on the window: the list re-orders the grip's row in the DOM, which drops pointer capture
+  document.body.classList.add('is-reordering') // keep the grabbing hand wherever the pointer goes
+  window.addEventListener('pointermove', dragMove)
+  window.addEventListener('pointerup', dragEnd)
+  window.addEventListener('pointercancel', dragEnd)
 }
 function dragMove(e: PointerEvent) {
+  follow?.move(e)
   const cur = dragList.value
   if (!cur || !box.value) return
-  const items = Array.from(box.value.children) as HTMLElement[]
   const from = cur.findIndex((r) => r.id === dragging.value)
   const me = cur[from]!
-  let at = items.findIndex((el) => e.clientY < el.getBoundingClientRect().bottom)
+  let at = rowAt(box.value, e.clientY, (y, h) => y < h)
   if (at < 0) at = cur.length - 1
   // climb to the row at this position that shares the dragged row's parent
   while (at >= 0 && cur[at]!.parentId !== me.parentId && cur[at]!.depth > me.depth) at--
@@ -71,10 +79,18 @@ function dragMove(e: PointerEvent) {
   dragList.value = [...rest.slice(0, insertAt), ...block, ...rest.slice(insertAt)]
 }
 async function dragEnd() {
+  document.body.classList.remove('is-reordering')
+  window.removeEventListener('pointermove', dragMove)
+  window.removeEventListener('pointerup', dragEnd)
+  window.removeEventListener('pointercancel', dragEnd)
+  follow?.end()
+  follow = undefined
   const next = dragList.value
-  dragList.value = null
   dragging.value = ''
-  if (!next || next.every((r, i) => r.id === rows.value[i]?.id)) return
+  if (!next || next.every((r, i) => r.id === rows.value[i]?.id)) {
+    dragList.value = null
+    return
+  }
   // number every row among its siblings, in the new order
   const seen = new Map<string, number>()
   for (const r of next) {
@@ -84,6 +100,8 @@ async function dragEnd() {
     if (kind.value === 'tags') await put('tags', { ...data.tags.find((t) => t.id === r.id)!, order })
     else await put('series', { ...data.series.find((s) => s.id === r.id)!, order })
   }
+  // keep showing the new order until it is saved, so the list does not jump back for a moment
+  dragList.value = null
 }
 
 async function add() {
@@ -137,7 +155,7 @@ async function del() {
           <span class="truncate">{{ r.name }}</span>
           <span class="shrink-0 text-xs text-muted">{{ r.count }}</span>
         </button>
-        <span class="circle-btn cursor-grab touch-none text-muted select-none active:cursor-grabbing" aria-label="拖動調整順序" role="button" @pointerdown.prevent="dragStart($event, r.id)" @pointermove="dragMove" @pointerup="dragEnd" @pointercancel="dragEnd"><GripVertical :size="18" /></span>
+        <span class="circle-btn cursor-grab touch-none text-muted select-none active:cursor-grabbing" aria-label="拖動調整順序" role="button" @pointerdown.prevent="dragStart($event, r.id)"><GripVertical :size="18" /></span>
       </div>
     </li>
   </ul>

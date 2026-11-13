@@ -9,6 +9,7 @@ import { Eye, EyeOff, GripVertical, Plus, RotateCcw } from '@/lib/uiIcons'
 import PopupDialog from '@/components/PopupDialog.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import SelectField from '@/components/SelectField.vue'
+import { animateReorder, followPointer, rowAt } from '@/lib/reorderAnim'
 
 const settings = useSettings()
 const data = useData()
@@ -28,24 +29,37 @@ const dragList = ref<TypeDef[] | null>(null)
 const dragging = ref('')
 const shown = computed(() => dragList.value ?? list.value)
 const rows = ref<HTMLElement>()
+animateReorder(rows, shown)
+let follow: ReturnType<typeof followPointer> | undefined
 function dragStart(e: PointerEvent, id: string) {
+  follow = followPointer(e.currentTarget as HTMLElement, e)
   dragList.value = [...list.value]
   dragging.value = id
-  ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+  // listen on the window: the list re-orders the grip's row in the DOM, which drops pointer capture
+  document.body.classList.add('is-reordering') // keep the grabbing hand wherever the pointer goes
+  window.addEventListener('pointermove', dragMove)
+  window.addEventListener('pointerup', dragEnd)
+  window.addEventListener('pointercancel', dragEnd)
 }
 function dragMove(e: PointerEvent) {
+  follow?.move(e)
   const cur = dragList.value
   if (!cur || !rows.value) return
-  const items = Array.from(rows.value.children) as HTMLElement[]
   const from = cur.findIndex((t) => t.value === dragging.value)
-  let to = items.findIndex((el) => e.clientY < el.getBoundingClientRect().top + el.offsetHeight / 2)
-  if (to < 0) to = items.length - 1
+  let to = rowAt(rows.value, e.clientY, (y, h) => y < h / 2)
+  if (to < 0) to = cur.length - 1
   if (to === from) return
   const next = [...cur]
   next.splice(to, 0, next.splice(from, 1)[0]!)
   dragList.value = next
 }
 function dragEnd() {
+  document.body.classList.remove('is-reordering')
+  window.removeEventListener('pointermove', dragMove)
+  window.removeEventListener('pointerup', dragEnd)
+  window.removeEventListener('pointercancel', dragEnd)
+  follow?.end()
+  follow = undefined
   const next = dragList.value
   dragList.value = null
   dragging.value = ''
@@ -102,7 +116,7 @@ async function removeType() {
         <EyeOff v-if="t.hidden" :size="18" class="text-muted" />
         <Eye v-else :size="18" />
       </button>
-      <span class="icon-btn cursor-grab touch-none border-0 bg-transparent text-muted select-none active:cursor-grabbing" aria-label="拖動調整順序" role="button" @pointerdown.prevent="dragStart($event, t.value)" @pointermove="dragMove" @pointerup="dragEnd" @pointercancel="dragEnd"><GripVertical :size="18" /></span>
+      <span class="icon-btn cursor-grab touch-none border-0 bg-transparent text-muted select-none active:cursor-grabbing" aria-label="拖動調整順序" role="button" @pointerdown.prevent="dragStart($event, t.value)"><GripVertical :size="18" /></span>
     </li>
   </ul>
 
