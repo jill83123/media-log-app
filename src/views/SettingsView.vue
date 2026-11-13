@@ -57,8 +57,8 @@ const groups = computed(() => [
   <ul class="card inset-divide mb-5 overflow-hidden p-0">
     <li>
       <button class="flex w-full items-center gap-2 px-5 py-4 text-left transition active:bg-surface-2 disabled:opacity-60" :disabled="checking" @click="updateReady ? applyUpdate() : checkForUpdate()">
-        <span class="flex-1">版本：{{ version }}</span>
-        <span class="text-sm" :class="updateReady ? 'font-semibold text-primary' : 'text-muted'">{{ updateReady ? '有新版本，點此更新' : checking ? '檢查中…' : '檢查更新' }}</span>
+        <span class="flex-1">版本</span>
+        <span class="text-sm" :class="updateReady ? 'font-semibold text-primary' : 'text-muted'">{{ updateReady ? '有新版本，點此更新' : checking ? '檢查中…' : version }}</span>
       </button>
     </li>
   </ul>
