@@ -130,6 +130,12 @@ async function nudge(n: number) {
 const showsProgress = (r: { id: string; status: string }) => r.id !== latest_.value?.id && r.status !== 'done'
 const progressOpen = ref(false)
 const drawerValue = ref(0)
+/** the sheet never shows a number above the total: typing past it snaps back to it */
+function setDrawer(v: number, input?: HTMLInputElement) {
+  const top = latest_.value ? topOf(latest_.value.progress) : Infinity
+  drawerValue.value = Math.min(top, Math.max(0, v))
+  if (input) input.value = String(drawerValue.value)
+}
 watch(progressOpen, (o) => {
   if (o) drawerValue.value = latest_.value?.progress.current ?? 0
 })
@@ -391,8 +397,8 @@ async function removeDay() {
         <h2 class="text-lg leading-snug font-bold">進度<span v-if="!latest_.progress.infinite && latest_.progress.total > 0" class="ml-1.5 text-sm font-normal text-muted">（共 {{ latest_.progress.total }} {{ latest_.progress.unit }}）</span></h2>
         <div class="flex items-center gap-3">
           <button type="button" class="icon-btn border-0 bg-transparent disabled:opacity-30" aria-label="減一" :disabled="drawerValue <= 0" @click="drawerValue--"><Minus :size="18" /></button>
-          <input class="input min-w-0 flex-1 text-center" inputmode="numeric" :value="drawerValue" @input="drawerValue = Number(($event.target as HTMLInputElement).value.replace(/\D/g, '')) || 0" />
-          <button type="button" class="icon-btn border-0 bg-transparent" aria-label="加一" @click="drawerValue++"><Plus :size="18" /></button>
+          <input class="input min-w-0 flex-1 text-center" inputmode="numeric" :value="drawerValue" @input="setDrawer(Number(($event.target as HTMLInputElement).value.replace(/\D/g, '')) || 0, $event.target as HTMLInputElement)" />
+          <button type="button" class="icon-btn border-0 bg-transparent disabled:opacity-30" aria-label="加一" :disabled="!!latest_ && drawerValue >= topOf(latest_.progress)" @click="setDrawer(drawerValue + 1)"><Plus :size="18" /></button>
         </div>
         <div class="grid grid-cols-[auto_1fr] gap-2">
           <button type="button" class="btn btn-ghost px-5 disabled:opacity-40" :disabled="drawerValue === latest_.progress.current" @click="drawerValue = latest_.progress.current">重置</button>
