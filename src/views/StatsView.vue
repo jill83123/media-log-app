@@ -5,6 +5,7 @@ import { workTypes } from '@/lib/meta'
 import { earliest, formatFuzzy, today } from '@/lib/date'
 import { eventsOf, itemsOf, RANGE_PRESETS, rangeOf, summarize, type RangeId } from '@/lib/stats'
 import { useData } from '@/stores/data'
+import { useSettings } from '@/stores/settings'
 import PickSheet from '@/components/PickSheet.vue'
 import PopupDialog from '@/components/PopupDialog.vue'
 import { ChevronDown } from '@/lib/uiIcons'
@@ -13,7 +14,12 @@ import OverviewTab from '@/components/stats/OverviewTab.vue'
 
 const data = useData()
 /** one type at a time to begin with (the first in the user's order), so numbers and lists are not a mix of animes and novels */
-const types = ref<WorkType[]>(workTypes()[0] ? [workTypes()[0]!.value] : [])
+const settings = useSettings()
+/** shares the library's type pick, so choosing 小說 there shows 小說 here */
+const types = computed<WorkType[]>(() => {
+  const v = settings.s.libraryType || workTypes()[0]?.value
+  return v ? [v] : []
+})
 const rangeId = ref<RangeId>('year')
 const custom = ref({ from: '', to: '' })
 
@@ -26,7 +32,7 @@ const allEvents = computed(() => eventsOf(items.value, data.notes, data.progress
 /** one type at a time, picked from a dropdown ('' = all) */
 const typeId = computed<string>({
   get: () => types.value[0] ?? '',
-  set: (v) => (types.value = v ? [v] : []),
+  set: (v) => (settings.s.libraryType = v as WorkType),
 })
 /** the stats are for one type at a time: there is no 全部作品 here */
 const typeItems = computed(() => workTypes(typeId.value).map((t) => ({ value: t.value as string, label: t.label })))

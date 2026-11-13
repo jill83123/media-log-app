@@ -67,6 +67,11 @@ function pickType(v: string) {
   settings.s.libraryType = v
   f.value.types = v ? [v] : []
 }
+/** the stats page shares this pick and may change it while this page is kept alive */
+watch(
+  () => settings.s.libraryType,
+  (v) => (f.value.types = v ? [v] : []),
+)
 const sheet = ref(false)
 
 /** one row per round: a work that was read twice shows up twice, each with its own status, rating and dates */
