@@ -1,0 +1,33 @@
+# 這是會被 commit 的範例，只放佔位字，不要填入真實的值。
+# 真實的值放在 wrangler.local.toml（已被 git 忽略，執行 npm run deploy 或
+# node scripts/gen-vapid.mjs 時會自動建立）。
+# 部署：npm run deploy
+
+name = "media-log-auth"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+# Google OAuth 用戶端 ID（不是密鑰），部署前填入
+GOOGLE_CLIENT_ID = "xxxx.apps.googleusercontent.com"
+
+# 允許呼叫這個 Worker 的網站，多個用逗號分隔
+ALLOWED_ORIGINS = "https://username.github.io"
+
+# Web Push 的聯絡資訊（mailto:你的信箱 或 https://你的網站），不要留空
+VAPID_SUBJECT = "mailto:you@example.com"
+
+# 推播金鑰，由 scripts/gen-vapid.mjs 自動寫進 wrangler.local.toml。私鑰不要寫在這裡。
+VAPID_PUBLIC_KEY = ""
+VAPID_PRIVATE_JWK = ""
+
+# Google 用戶端密鑰：npx wrangler secret put GOOGLE_CLIENT_SECRET
+
+# 每日提醒：同一個人所有裝置的訂閱與提醒時間存在同一個 Durable Object
+[[durable_objects.bindings]]
+name = "PUSH"
+class_name = "PushGroup"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["PushGroup"]

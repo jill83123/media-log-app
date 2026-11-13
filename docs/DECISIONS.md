@@ -1,0 +1,94 @@
+# 書影紀錄 App — 決策紀錄
+
+標記 **【待確認】** 的項目需要使用者回覆後才開工；其餘為預設決策。
+
+## 1. 定位與技術
+
+- 個人用、local-first 的書影（書、動畫、漫畫、小說、電影、劇集）紀錄 PWA，繁體中文，手機優先。
+- 沿用 fsrs-card-app / account-book：Vite + Vue 3 + TS、Pinia、Tailwind v4 + CSS 變數主題、Dexie、`@lucide/vue`、vite-plugin-pwa、GitHub Pages + Actions、hash router、Cloudflare Worker（`worker/`）。
+- 資料先寫 IndexedDB，雲端只做同步。
+
+## 2. 樣式
+
+- 背景接近全白（淺色 `#fcfcfd` 左右，卡片以細邊框＋極淡陰影區分，不用灰底）；深色模式另做。
+- 主題色以 CSS 變數 `--primary` 切換，先做 **藍**、**棕**兩套（淺／深色各自微調），之後可加色票。
+- **不用瀏覽器原生元件**：日期（支援「年」「年月」「年月日」三種精度的自寫選擇器）、下拉選單、對話框、Toast、評分選擇器、進度編輯全部自寫（BottomSheet 沿用既有寫法）。
+
+## 3. 資料模型
+
+| 實體 | 重點欄位 |
+|---|---|
+| `work`（作品） | id、type（動畫／漫畫／輕小說／小說／書籍／電影／劇集…可自訂）、title、原名、封面（網址或 Drive 檔案 id）、作者/製作、簡介、外部來源 id（bangumi/douban/goodreads/博客來）、`seriesId`、`seriesOrder`、標籤 id[]、分類 id、`deleted` |
+| `series`（系列） | id、名稱、封面；同系列不同集/季/冊的作品掛在同一系列底下集中管理，系列頁彙總進度與平均分 |
+| `record`（一次觀看/閱讀，即「週目」） | id、workId、round（第幾次）、status、progress{current,total,unit,infinite}、rating(0.5–5)或空、startDate、endDate、review（心得，Markdown）、`deleted` |
+| `progressLog`（進度歷史） | id、recordId、progress、date（可模糊）、note（今日筆記）— 同一週目的每次更新都留一筆，如截圖的時間軸 |
+| `tag` / `category` | 使用者自建，標籤多對多、分類單選（可階層） |
+| `ratingScale` | 10 級預設文案（5.0 神作…0.5 踩雷），使用者可改每級的名稱與說明 |
+| `meta` | 設定、同步狀態 |
+
+- 所有實體有 `id(UUID)`、`updatedAt`、墓碑 `deleted`，方便同步。
+- **重置重看**：作品結束後可「再看一次」→ 建立新的 record（round+1），舊 record 與其進度歷史完整保留（如截圖「回顧」清單）。
+- **狀態**：未看、在看、閒置、看完、拋棄。**看完可不評分**（rating 為空，統計中記為「未評分」，不計入平均）。
+- **進度**：單位可自訂（集、話、頁、%、章…），支援「無限進度」（無總量，如連載中長篇）。
+- **模糊日期**：以字串 `YYYY` / `YYYY-MM` / `YYYY-MM-DD` 存，並附精度；統計與月曆時，模糊日期照精度歸位（只有年月→歸在該月，月曆不顯示具體日格但算入月統計；熱力圖只用有「日」精度的資料）。開始/結束都可留空。
+- **共花天數**：兩端都是完整日期才算；有任一端模糊或空白時顯示「約 N 天」或「—」，也可手動填入覆寫。
+- 預設排序：依最近更新/日期新到舊；可依評分、狀態、類型、標籤、分類、系列篩選與搜尋。
+
+### 3.1 後續確認的調整
+
+- **評分數字可自訂**【已確認】：每級有固定的內部「檔位」（0.5–5.0，存在紀錄裡、決定星星數），另有可修改的「顯示分數」（如 10、9、85）。改數字不會動到舊紀錄；平均分用檔位平均後再換算成顯示分數。設定頁可一鍵套用 5／10／100 分制。
+- **首頁不叫「書庫」**【已確認】：因為收的不只書，導覽與標題一律叫「作品」。
+- **首頁可切換顯示方式**【已確認】：預設為精簡列表（小圖＋作品名＋右側進度，列高較矮），按搜尋列旁的按鈕可切成三欄圖片格狀，選擇會記住。兩種都只顯示封面、作品名、進度；在看只顯示進度，其他狀態（未看、閒置、看完、拋棄）才在封面角落顯示狀態標籤，看完且有評分時顯示分數。
+
+## 4. 爬蟲（搜尋作品）
+
+瀏覽器直接 fetch 會被 CORS 擋，所以**統一走 Cloudflare Worker 代理**（沿用 fsrs-card-app 的 worker 架構，含白名單來源、回傳 JSON 正規化格式）。實測（2026-11-12，由本機 curl，非 Worker IP）：
+
+| 來源 | 結果 | 做法 |
+|---|---|---|
+| **Bangumi** | ✅ 官方 API `api.bgm.tv`（要自訂 User-Agent），有封面、中文名、作者、簡介、集數 | 動畫、漫畫、輕小說首選，優先實作 |
+| **豆瓣** | ✅ 電影：`movie.douban.com/j/subject_suggest?q=`；書：`search.douban.com/book/subject_search` 頁面內有 `window.__DATA__` JSON；詳情頁可解析 | ⚠️ 豆瓣常封鎖資料中心 IP，Cloudflare Worker 可能遇到 403/驗證，需上線實測；失敗時顯示「此來源暫時無法使用」並不影響其他來源 |
+| **博客來** | ✅ `search.books.com.tw/search/query/key/{關鍵字}`（可用 ISBN）回 HTML，解析即可；注意**帶 `/cat/BKA` 的網址會 403**，不要用 | 同樣可能被 Worker IP 擋，需上線實測 |
+| **Goodreads** | ✅ 搜尋頁 200、`/book/auto_complete?format=json` 回 JSON | 以 auto_complete 為主，詳情頁解析為輔 |
+| 備援（我額外加） | Open Library API（有 CORS、免費）作為國外書籍備援；Google Books 今日已被配額限制，不採用 | 低優先 |
+
+- 搜尋結果只取：標題、原名、封面、作者、年份、簡介、類型、來源 id；選取後存成本地 work，之後完全離線可用。
+- 搜尋來源可在設定開關（如截圖的「搜索源設置」），也可「手動錄入」。
+- 封面可**自行上傳**（壓縮後存 Drive），爬蟲封面只存網址並可一鍵「下載到我的 Drive」避免失效。
+
+## 5. Google 同步【待確認：見提問】
+
+- 使用者要的是**自己看得到的資料夾與試算表**，所以 OAuth scope 用 `drive.file`（只能存取本 App 建立的檔案），不用 `drive.appdata`：
+  - 首次連線自動在使用者 Drive 建立資料夾 `書影紀錄/`，內含：`書影紀錄資料` 試算表、`covers/` 圖片資料夾。
+  - 試算表分頁：`works`、`series`、`records`、`progressLogs`、`tags`、`categories`、`settings`。一列一筆，可直接在試算表檢視/備份；`updatedAt` 與 `deleted` 欄位用於合併。
+  - 同步演算法沿用 fsrs-card-app：Last-Write-Wins＋墓碑＋衝突提示，開啟 App／儲存後／切背景／手動觸發；需要 Sheets API 與 Drive API（兩個都要在 Google Cloud 啟用）。
+  - 試算表有每分鐘讀寫配額與儲存格上限，所以用批次 `values.batchUpdate`，圖片只放 Drive 不放試算表。
+- 沿用 Worker 保管 client secret 做 refresh token，避免每小時重新登入（fsrs-card-app 已有）。
+- 另提供本機 JSON 匯出/匯入。
+
+## 6. 統計
+
+- 篩選：**類型**（動畫/電影/韓劇…）、**時間範圍**（本月、上月、近 3 個月、今年、去年、全部、自訂區間）、狀態。
+- 檢視：
+  1. **熱力圖**（GitHub 風格，用主色深淺；單位為進度更新次數或完成數可切換）
+  2. **時間軸**（依日期的完成/開始事件）
+  3. **月曆**（如截圖，格內顯示封面，點擊進入當天紀錄）
+  4. 總覽：完成數、平均分、評分分佈（10 級長條）、類型占比（甜甜圈）、每月完成數趨勢、狀態分佈。
+- 沿用 fsrs-card-app 自寫的 BarChart / DonutChart / 熱力圖元件，不引入大型圖表庫。
+- 年度回顧頁（如截圖的 2025 年電影票根牆/書脊牆）列為後期功能。
+
+## 7. 通知推播
+
+- Web Push（VAPID）＋ Service Worker `push-sw.js`，沿用 fsrs-card-app 的 `worker/src/push.js`（Durable Object 每日排程）。
+- 提醒種類：每日固定時間提醒（可多組）、「在看」作品 N 天沒更新進度的提醒、連載更新日提醒（作品可設更新星期）。
+- iOS 需先「加入主畫面」才支援推播；設定頁會說明。
+
+## 8. 功能分階段（里程碑）
+
+1. 專案骨架、主題（藍/棕）、自寫元件庫（日期、BottomSheet、Select、評分）、資料層。
+2. 作品與紀錄 CRUD：狀態、進度（單位/無限）、評分、心得、模糊日期、週目與進度歷史、標籤/分類、系列。
+3. Worker 爬蟲代理＋搜尋頁（Bangumi → 豆瓣 → 博客來 → Goodreads）。
+4. 統計（篩選、熱力圖、時間軸、月曆）。
+5. Google Drive/Sheets 同步與圖片上傳。
+6. 推播。
+7. 部署（GitHub Pages＋Worker）、測試。

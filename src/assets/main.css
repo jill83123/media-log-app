@@ -1,0 +1,269 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/chiron-hei-hk';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* near-white page; cards are told apart by a hairline border, not by a grey page behind them */
+:root {
+  /* the space every page leaves above its title (more on phones with a notch) */
+  --page-pt: max(0.75rem, env(safe-area-inset-top));
+  --primary: #9a6b4b;
+  --bg: #fdfdfe;
+  --surface: #ffffff;
+  --surface-2: #f5f6f7;
+  --ink: #26292d;
+  --muted: #8a9096;
+  --line: #e9ebed;
+  --danger: #d9534f;
+  --success: #4caf7a;
+  --warn: #e0a93b;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 2px 8px -2px rgb(0 0 0 / 0.05);
+  --shadow-lg: 0 1px 2px rgb(0 0 0 / 0.04), 0 12px 32px -8px rgb(0 0 0 / 0.16);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  color-scheme: light;
+}
+
+.dark {
+  --bg: #1c1d1f;
+  --surface: #26282b;
+  --surface-2: #303337;
+  --ink: #eceef0;
+  --muted: #9aa0a6;
+  --line: #383b40;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 2px 8px -2px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 12px 32px -8px rgb(0 0 0 / 0.6);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans:
+    'Inter Variable', 'Chiron Hei HK Variable', 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei',
+    system-ui, sans-serif;
+  --color-primary: var(--primary);
+  --color-primary-soft: color-mix(in oklab, var(--primary) 12%, var(--surface));
+  --color-primary-strong: color-mix(in oklab, var(--primary) 80%, var(--ink));
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-warn: var(--warn);
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  -webkit-tap-highlight-color: transparent;
+  /* scrolling only: no double-tap or pinch zoom by accident */
+  touch-action: pan-x pan-y;
+}
+
+body {
+  min-height: 100dvh;
+  /* sizes: 14px for everything you read and tap, 12px for fine print; inputs stay 16px so iPhones don't zoom in */
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+::selection {
+  background: color-mix(in oklab, var(--primary) 25%, transparent);
+}
+
+/* keyboard users get a clear ring; mouse and touch users do not */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+.input:focus-visible {
+  outline: none;
+  /* keep the field's own corners; the rule above would square them off and leave odd bits at the corners of the glow */
+  border-radius: 1rem;
+}
+/* a field made of a box holding a bare input (an icon and the text, like the search): the box shows the focus, the bare input inside draws nothing */
+.input:not(input, textarea):focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--primary) 15%, transparent);
+}
+.input:not(input, textarea) input:focus-visible {
+  outline: none;
+  border-radius: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+
+@layer components {
+  /* a page title that stays on screen while the page scrolls; it takes the page's top padding with it so the title doesn't move when it sticks */
+  .sticky-header {
+    @apply sticky top-0 z-20 -mx-4 mb-3 flex items-center justify-center bg-bg px-4 pb-2;
+    margin-top: calc(-1 * var(--page-pt));
+    padding-top: calc(var(--page-pt) + 0.5rem);
+    min-height: calc(3.5rem + var(--page-pt));
+  }
+  .card {
+    @apply rounded-2xl border border-line bg-surface p-4 transition-[box-shadow,transform,background-color] duration-200;
+    box-shadow: var(--shadow);
+  }
+  a.card,
+  button.card {
+    @apply active:scale-[0.985] active:bg-surface-2;
+  }
+  .icon-btn {
+    @apply inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink transition duration-150 active:scale-90 disabled:opacity-40;
+  }
+  @media (hover: hover) {
+    .icon-btn:hover {
+      background: var(--surface-2);
+    }
+  }
+  .btn {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-transparent px-5 py-2 text-sm font-semibold transition duration-150 select-none active:scale-[0.97] disabled:opacity-40;
+  }
+  .btn-sm {
+    @apply min-h-9 rounded-xl px-3 py-1 text-xs;
+  }
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-[color-mix(in_srgb,var(--primary),black_9%)] active:bg-[color-mix(in_srgb,var(--primary),black_14%)];
+  }
+  .btn-soft {
+    @apply bg-primary-soft text-primary-strong hover:bg-[color-mix(in_srgb,var(--color-primary-soft),var(--primary)_10%)];
+  }
+  .btn-ghost {
+    @apply border-line bg-surface text-ink hover:bg-surface-2;
+  }
+  .btn-danger {
+    @apply bg-danger text-white;
+  }
+  .input {
+    @apply min-h-12 w-full rounded-2xl border text-base border-line bg-surface px-4 py-2 text-ink outline-none placeholder:text-muted transition focus:border-primary focus:ring-4 focus:ring-primary/15;
+  }
+  textarea.input {
+    @apply py-3;
+  }
+  .label {
+    @apply mb-1.5 block text-xs font-semibold tracking-wide text-muted;
+  }
+  .chip {
+    @apply inline-flex min-h-9 items-center gap-1 rounded-full border border-line bg-surface px-3.5 py-1.5 text-sm text-ink transition duration-150 select-none active:scale-95;
+  }
+  .chip-on {
+    @apply border-primary bg-primary-soft font-semibold text-primary-strong;
+  }
+  .tag {
+    @apply inline-flex items-center rounded-full border border-primary/50 px-2 py-[5px] text-xs leading-none font-medium text-primary;
+  }
+  .section-title {
+    @apply mb-2 px-1 text-sm font-semibold text-muted;
+  }
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 45%, transparent) transparent;
+}
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* works slide into their new places while one is dragged */
+.reorder-move {
+  transition: transform 0.2s ease;
+}
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+.sheet-enter-active {
+  transition:
+    transform 0.32s var(--ease-out),
+    opacity 0.2s ease;
+}
+.sheet-leave-active {
+  transition:
+    transform 0.2s ease-in,
+    opacity 0.2s ease;
+}
+.sheet-enter-from,
+.sheet-leave-to {
+  transform: translateY(100%);
+  opacity: 0.6;
+}
+
+/* pages ease in a little instead of snapping */
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+#app > div:first-child {
+  animation: page-in 0.25s var(--ease-out);
+}
+
+/* no browser number arrows: custom steppers are used instead */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+@layer components {
+  /* a list whose rows are told apart by a faint line that stops short of the edges */
+  .inset-divide > li {
+    position: relative;
+  }
+  .inset-divide > li + li::before {
+    content: '';
+    @apply absolute inset-x-3 top-0 h-px bg-line/60;
+  }
+  .circle-btn {
+    @apply relative inline-flex size-10 shrink-0 items-center justify-center rounded-xl text-ink transition duration-150 active:scale-90 active:bg-surface-2 disabled:opacity-40;
+  }
+}
+
+/* rows that can be dragged sideways with a mouse (lib/dragScroll.ts) */
+[data-drag-scroll],
+[data-drag-scroll] * {
+  cursor: grab;
+}
+[data-drag-scroll='dragging'],
+[data-drag-scroll='dragging'] * {
+  cursor: grabbing;
+  user-select: none;
+}
