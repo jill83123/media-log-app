@@ -16,7 +16,7 @@ export default defineConfig({
     VitePWA({
       // prompt instead of auto-reloading so an update never interrupts entering a record
       registerType: 'prompt',
-      includeAssets: ['favicon.ico', 'icon.svg', 'apple-touch-icon.png'],
+      includeAssets: ['favicon.ico', 'icon.svg', 'apple-touch-icon.png', 'pwa-192.png', 'pwa-512.png', 'pwa-maskable-512.png'],
       manifest: {
         name: '書影紀錄',
         short_name: '書影紀錄',
@@ -29,6 +29,9 @@ export default defineConfig({
         scope: './',
         icons: [
           { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+          { src: 'pwa-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'pwa-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
           { src: 'icon-maskable.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
         ],
       },
