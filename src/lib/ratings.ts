@@ -12,14 +12,14 @@ export interface RatingLevel {
 /** The default 10 levels. Any number of levels is allowed; numbers, names and descriptions are all editable. */
 export const DEFAULT_RATINGS: RatingLevel[] = [
   { value: 5, score: 5, name: '神作', desc: '令人深深著迷，值得反覆回味。' },
-  { value: 4.5, score: 4.5, name: '非常推薦', desc: '過程充滿驚喜或十分享受，讓人意猶未盡。' },
-  { value: 4, score: 4, name: '推薦', desc: '過程十分享受，雖然有些小缺點，但整體還是很吸引人。' },
-  { value: 3.5, score: 3.5, name: '不錯', desc: '沒有感到特別驚艷，但看完後仍感到滿足。' },
-  { value: 3, score: 3, name: '還行', desc: '有些亮點，但整體表現偏普通，適合有興趣的人觀看。' },
-  { value: 2.5, score: 2.5, name: '普通', desc: '中規中矩，不到喜歡也不反感，適合打發時間。' },
-  { value: 2, score: 2, name: '失望', desc: '不如預期，部分不錯但缺點多，可能僅適合特定觀眾。' },
-  { value: 1.5, score: 1.5, name: '差', desc: '缺點非常多，很難投入其中，但還是努力多看了幾集。' },
-  { value: 1, score: 1, name: '非常差', desc: '幾乎沒有值得稱讚的地方，很快就放棄了。' },
+  { value: 4.5, score: 4.5, name: '非常推薦', desc: '過程充滿驚喜，讓人意猶未盡。' },
+  { value: 4, score: 4, name: '推薦', desc: '過程十分享受，整體很吸引人。' },
+  { value: 3.5, score: 3.5, name: '不錯', desc: '沒有特別驚艷，但看完仍滿足。' },
+  { value: 3, score: 3, name: '還行', desc: '有些亮點，整體表現普通。' },
+  { value: 2.5, score: 2.5, name: '普通', desc: '中規中矩，適合打發時間。' },
+  { value: 2, score: 2, name: '失望', desc: '不如預期，缺點多於優點。' },
+  { value: 1.5, score: 1.5, name: '差', desc: '缺點很多，很難投入其中。' },
+  { value: 1, score: 1, name: '非常差', desc: '幾乎沒有值得稱讚的地方。' },
   { value: 0.5, score: 0.5, name: '踩雷', desc: '完全不值得浪費時間。' },
 ]
 

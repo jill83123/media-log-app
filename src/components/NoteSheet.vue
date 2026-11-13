@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { useUi } from '@/stores/ui'
 import type { WorkNote } from '@/db/types'
+import { ChevronLeft } from '@/lib/uiIcons'
 import FuzzyDateField from './FuzzyDateField.vue'
 
 const props = defineProps<{ note: WorkNote; isNew?: boolean; unit?: string }>()
 const emit = defineEmits<{ save: [WorkNote]; remove: [] }>()
 const open = defineModel<boolean>('open', { required: true })
+const ui = useUi()
 const draft = ref<WorkNote>({ ...props.note })
 
 watch(open, (o) => {
@@ -25,6 +28,18 @@ const progressText = computed({
     draft.value.progress = d === '' ? undefined : Number(d)
   },
 })
+
+/** anything typed since it was opened */
+const changed = computed(() => {
+  const a = draft.value
+  const b = props.note
+  return (a.title ?? '') !== (b.title ?? '') || a.body !== b.body || a.date !== b.date || (a.progress ?? null) !== (b.progress ?? null)
+})
+/** leaving by the back arrow or Esc asks first when something would be lost */
+async function close() {
+  if (changed.value && !(await ui.confirm('放棄這次的修改？', { message: '還沒儲存的內容會消失。', confirmText: '放棄', danger: true }))) return
+  open.value = false
+}
 
 function save() {
   emit('save', { ...draft.value, title: draft.value.title?.trim() || undefined, body: draft.value.body.trim(), progress: draft.value.progress })
@@ -66,16 +81,15 @@ watch(
 <template>
   <Teleport to="body">
     <Transition name="fade">
-      <div v-if="open" class="fixed inset-x-0 top-0 z-40 mx-auto flex w-full max-w-xl flex-col bg-bg" :style="{ height }" role="dialog" aria-modal="true" @keydown.esc="open = false">
-        <div class="flex shrink-0 items-center justify-between gap-3 border-b border-line px-4 py-3">
-          <button class="px-1 text-base text-muted" @click="open = false">取消</button>
+      <div v-if="open" class="fixed inset-x-0 top-0 z-40 mx-auto flex w-full max-w-xl flex-col bg-bg" :style="{ height }" role="dialog" aria-modal="true" @keydown.esc="close">
+        <div class="flex min-h-14 shrink-0 items-center justify-between gap-3 px-4 py-2">
+          <button class="circle-btn -ml-2.5" aria-label="返回" @click="close"><ChevronLeft :size="22" /></button>
           <h2 class="text-base font-bold">{{ isNew ? '寫' : '編輯' }}{{ label }}</h2>
-          <button class="px-1 text-base font-bold text-primary disabled:opacity-40" :disabled="empty" @click="save">儲存</button>
+          <!-- keeps the title in the middle: save lives at the bottom -->
+          <span class="size-10 shrink-0 -mr-2.5" aria-hidden="true" />
         </div>
 
-        <div class="flex min-h-0 flex-1 flex-col gap-3 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <input v-model="draft.title" class="input shrink-0" placeholder="標題（可不填）" />
-          <textarea v-model="draft.body" class="input min-h-0 flex-1 resize-none leading-7" placeholder="想到什麼就寫什麼…" />
+        <div class="flex min-h-0 flex-1 flex-col gap-3 px-4 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <div class="grid shrink-0 gap-3" :class="draft.kind === 'note' && 'grid-cols-2'">
             <FuzzyDateField v-model="draft.date" label="日期" />
             <label v-if="draft.kind === 'note'" class="block">
@@ -86,7 +100,12 @@ watch(
               </span>
             </label>
           </div>
-          <button v-if="!isNew" class="btn btn-ghost shrink-0 text-danger" @click="((open = false), emit('remove'))">刪除</button>
+          <input v-model="draft.title" class="input shrink-0" placeholder="標題（可不填）" />
+          <textarea v-model="draft.body" class="input min-h-0 flex-1 resize-none leading-7" placeholder="想到什麼就寫什麼…" />
+          <div class="mt-2 flex shrink-0 gap-3">
+            <button v-if="!isNew" class="btn btn-ghost shrink-0 px-3.5 text-sm text-danger" @click="((open = false), emit('remove'))">刪除</button>
+            <button class="btn btn-primary min-w-0 flex-1 disabled:opacity-40" :disabled="empty" @click="save">儲存</button>
+          </div>
         </div>
       </div>
     </Transition>

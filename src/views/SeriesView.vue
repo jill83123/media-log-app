@@ -5,9 +5,9 @@ import { useData } from '@/stores/data'
 import { useUi } from '@/stores/ui'
 import { useSettings } from '@/stores/settings'
 import { put, removeSeries } from '@/lib/repo'
-import { formatRating, formatScore, scoreOf } from '@/lib/ratings'
+import { formatRating } from '@/lib/ratings'
 import { statusLabel } from '@/lib/meta'
-import { LayoutGrid, List, Pencil } from '@/lib/uiIcons'
+import { LayoutGrid, List, Pencil, Star } from '@/lib/uiIcons'
 import PageHeader from '@/components/PageHeader.vue'
 import StatusPill from '@/components/StatusPill.vue'
 import WorkCover from '@/components/WorkCover.vue'
@@ -144,11 +144,6 @@ function swallowClick(e: MouseEvent) {
   e.preventDefault()
   e.stopPropagation()
 }
-const done = computed(() => items.value.filter((x) => x.record?.status === 'done').length)
-const avg = computed(() => {
-  const r = items.value.map((x) => (x.record?.rating == null ? undefined : scoreOf(x.record.rating))).filter((v): v is number => v != null)
-  return r.length ? r.reduce((a, b) => a + b, 0) / r.length : null
-})
 
 /** the pencil opens one small dialog for the name and for deleting the series */
 const editOpen = ref(false)
@@ -181,12 +176,8 @@ async function del() {
       <button class="circle-btn" aria-label="編輯系列" @click="edit"><Pencil :size="19" /></button>
     </template>
   </PageHeader>
-  <div class="card mb-4 flex justify-around text-center">
-    <div><p class="text-xl font-bold">{{ items.length }}</p><p class="text-xs text-muted">作品</p></div>
-    <div><p class="text-xl font-bold">{{ done }}</p><p class="text-xs text-muted">已看完</p></div>
-    <div><p class="text-xl font-bold">{{ avg == null ? '—' : formatScore(avg) }}</p><p class="text-xs text-muted">平均分</p></div>
-  </div>
-  <TransitionGroup ref="box" tag="ul" name="reorder" class="relative" :class="view === 'grid' ? 'grid grid-cols-3 gap-x-3 gap-y-4' : 'space-y-2'" @touchmove="onTouchMove">
+  <p class="mb-2 px-1 text-xs text-muted">共 {{ items.length }} 個</p>
+  <TransitionGroup ref="box" tag="ul" :name="dragging || settling ? 'reorder' : 'no-move'" class="relative" :class="view === 'grid' ? 'grid grid-cols-3 gap-x-3 gap-y-4' : 'space-y-2'" @touchmove="onTouchMove">
     <li
       v-for="{ work, record } in shown"
       :key="work.id"
@@ -209,7 +200,7 @@ async function del() {
         <p class="min-w-0 flex-1 truncate text-sm font-medium">{{ work.title }}</p>
         <div class="flex shrink-0 flex-col items-end gap-1 text-xs">
           <StatusPill v-if="record" :status="record.status" />
-          <span v-if="record?.rating != null" class="leading-none font-semibold text-warn">★ {{ formatRating(record.rating) }}</span>
+          <span v-if="record?.rating != null" class="flex items-center gap-1 leading-none font-semibold text-warn"><Star :size="11" :stroke-width="0" fill="currentColor" />{{ formatRating(record.rating) }}</span>
         </div>
       </RouterLink>
       <RouterLink v-else :to="`/work/${work.id}`" draggable="false" class="block transition-[scale] duration-200">

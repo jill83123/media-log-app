@@ -135,7 +135,7 @@ async function save() {
   <Teleport to="body">
     <Transition name="fade">
       <div v-if="open && ratingOpen" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-4" @click.self="ratingOpen = false" @keydown.esc="ratingOpen = false">
-        <RatingList class="max-h-[calc(var(--pop-h,100dvh)-12rem)] w-full max-w-[22rem] overflow-y-auto shadow-xl" role="dialog" aria-label="評分" :model-value="draft.rating" @pick="((draft.rating = $event), (ratingOpen = false))" />
+        <RatingList class="max-h-[calc(var(--pop-h,100dvh)-12rem)] w-full max-w-[26rem] overflow-y-auto shadow-xl" role="dialog" aria-label="評分" :model-value="draft.rating" @pick="((draft.rating = $event), (ratingOpen = false))" />
       </div>
     </Transition>
   </Teleport>

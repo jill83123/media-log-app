@@ -124,7 +124,7 @@ async function removeThis() {
 
 <template>
   <PageHeader :title="editingId ? '編輯作品' : '新增作品'">
-    <template #right><button class="circle-btn -mr-2.5" aria-label="搜尋作品資料" @click="openSearch"><Search :size="20" /></button></template>
+    <template #right><button class="circle-btn" aria-label="搜尋作品資料" @click="openSearch"><Search :size="20" /></button></template>
   </PageHeader>
 
   <div class="space-y-4 pb-2">

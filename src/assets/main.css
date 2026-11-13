@@ -120,7 +120,7 @@ button:disabled {
 @layer components {
   /* a page title that stays on screen while the page scrolls; it takes the page's top padding with it so the title doesn't move when it sticks */
   .sticky-header {
-    @apply sticky top-0 z-20 -mx-4 mb-3 flex items-center justify-center bg-bg px-4 pb-2;
+    @apply sticky top-0 z-20 -mx-4 mb-2 flex items-center justify-center bg-bg px-4 pb-2;
     margin-top: calc(-1 * var(--page-pt));
     padding-top: calc(var(--page-pt) + 0.5rem);
     min-height: calc(3.5rem + var(--page-pt));
@@ -134,7 +134,7 @@ button:disabled {
     @apply active:scale-[0.985] active:bg-surface-2;
   }
   .icon-btn {
-    @apply inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink transition duration-150 active:scale-90 disabled:opacity-40;
+    @apply inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink transition duration-150 active:scale-90 active:bg-surface-2 disabled:opacity-40;
   }
   @media (hover: hover) {
     .icon-btn:hover {

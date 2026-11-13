@@ -14,6 +14,6 @@ function pick(v: number | null) {
 
 <template>
   <PopupDialog v-model="open">
-    <RatingList class="max-h-[calc(var(--pop-h,100dvh)-12rem)] w-full max-w-[22rem] overflow-y-auto shadow-xl" role="dialog" aria-label="評分" :model-value="model" @pick="pick" />
+    <RatingList class="max-h-[calc(var(--pop-h,100dvh)-12rem)] w-full max-w-[26rem] overflow-y-auto shadow-xl" role="dialog" aria-label="評分" :model-value="model" @pick="pick" />
   </PopupDialog>
 </template>

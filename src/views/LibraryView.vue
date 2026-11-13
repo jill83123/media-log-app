@@ -12,7 +12,7 @@ import { useSync } from '@/stores/sync'
 import { useRouter } from 'vue-router'
 import { loadDemo } from '@/lib/demo'
 import { useUi } from '@/stores/ui'
-import { GalleryVerticalEnd, ChevronDown, ChevronLeft, Cloud, Filter, LoaderCircle, LayoutGrid, List, Plus, Search } from '@/lib/uiIcons'
+import { GalleryVerticalEnd, ChevronDown, ChevronLeft, Cloud, Filter, LoaderCircle, LayoutGrid, List, Plus, Search, Star } from '@/lib/uiIcons'
 import BottomSheet from '@/components/BottomSheet.vue'
 import PickSheet from '@/components/PickSheet.vue'
 import StatusPill from '@/components/StatusPill.vue'
@@ -205,7 +205,7 @@ const ratingSteps = computed(() => [0, ...mergeRatings(settings.s.ratings).map((
           <p class="truncate text-sm leading-tight font-medium">{{ w.title }}</p>
           <p v-if="w.creators" class="mt-px truncate text-xs leading-tight text-muted">{{ w.creators }}</p>
         </div>
-        <p v-if="rating != null" class="shrink-0 text-xs leading-none font-semibold text-warn">★ {{ formatRating(rating) }}</p>
+        <p v-if="rating != null" class="flex shrink-0 items-center gap-1 text-xs leading-none font-semibold text-warn"><Star :size="11" :stroke-width="0" fill="currentColor" />{{ formatRating(rating) }}</p>
       </RouterLink>
     </li>
   </ul>
@@ -230,7 +230,7 @@ const ratingSteps = computed(() => [0, ...mergeRatings(settings.s.ratings).map((
             </div>
             <div class="flex shrink-0 flex-col items-end gap-1.5 text-xs">
               <StatusPill :status="record?.status ?? 'todo'" />
-              <p v-if="record?.status === 'done' && record.rating != null" class="leading-none font-semibold text-warn">★ {{ formatRating(record.rating) }}</p>
+              <p v-if="record?.status === 'done' && record.rating != null" class="flex items-center gap-1 leading-none font-semibold text-warn"><Star :size="11" :stroke-width="0" fill="currentColor" />{{ formatRating(record.rating) }}</p>
             </div>
           </RouterLink>
         </li>
@@ -254,7 +254,7 @@ const ratingSteps = computed(() => [0, ...mergeRatings(settings.s.ratings).map((
         <div v-if="(record?.status === 'doing' || record?.status === 'paused') && progressRatio(record.progress)" class="mt-1.5 h-1 overflow-hidden rounded-full bg-line">
           <div class="h-full rounded-full" :class="record.status === 'paused' ? 'bg-warn' : 'bg-primary'" :style="{ width: `${progressRatio(record.progress) * 100}%` }" />
         </div>
-        <p v-else-if="record?.status === 'done' && record.rating != null" class="mt-0.5 text-xs font-semibold text-warn">★ {{ formatRating(record.rating) }}</p>
+        <p v-else-if="record?.status === 'done' && record.rating != null" class="mt-0.5 flex items-center gap-1 text-xs font-semibold text-warn"><Star :size="11" :stroke-width="0" fill="currentColor" />{{ formatRating(record.rating) }}</p>
       </RouterLink>
     </li>
   </ul>

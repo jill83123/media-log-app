@@ -63,7 +63,7 @@ async function reset() {
 
 <template>
   <PageHeader title="搜尋來源" :back="window.history.state?.back ? undefined : '/settings'">
-    <template #right><button class="circle-btn -mr-2.5 disabled:opacity-30" :disabled="!anyChanged" aria-label="還原預設" @click="reset"><RotateCcw :size="20" /></button></template>
+    <template #right><button class="circle-btn disabled:opacity-30" :disabled="!anyChanged" aria-label="還原預設" @click="reset"><RotateCcw :size="20" /></button></template>
   </PageHeader>
   <p class="-mt-1 mb-3 px-1 text-xs text-muted">每種類型各自設定，只列出適合的來源；開啟的可拖動排序。</p>
 

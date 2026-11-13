@@ -10,7 +10,7 @@ import { useCover } from '@/lib/covers'
 import { logProgress, progressLogId, put, remove, removeRecord, setProgress, startNewRound } from '@/lib/repo'
 import { useData } from '@/stores/data'
 import { useUi } from '@/stores/ui'
-import { Layers, Minus, Pencil, Plus, RotateCcw } from '@/lib/uiIcons'
+import { Layers, Minus, Pencil, Plus, RotateCcw, Star, ChevronDown } from '@/lib/uiIcons'
 import FuzzyDateField from '@/components/FuzzyDateField.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import PillTabs from '@/components/PillTabs.vue'
@@ -132,6 +132,8 @@ async function nudge(n: number) {
   const next = Math.min(topOf(r.progress), Math.max(0, r.progress.current + n))
   if (next !== r.progress.current) await changeProgress(r, next)
 }
+/** older rounds show how far they got, unless they were finished */
+const showsProgress = (r: { id: string; status: string }) => r.id !== latest_.value?.id && r.status !== 'done'
 const progressOpen = ref(false)
 const drawerValue = ref(0)
 watch(progressOpen, (o) => {
@@ -179,6 +181,27 @@ const feed = computed<FeedItem[]>(() => {
   const day = (x: FeedItem) => latest(x.date) || ''
   return out.sort((a, b) => (day(a) === day(b) ? (b.round?.round ?? 0) - (a.round?.round ?? 0) || b.rank - a.rank : day(a) < day(b) ? 1 : -1))
 })
+/** with several rounds the list is folded into one section per round, newest first; the older ones start closed */
+const feedGroups = computed(() => {
+  if (rounds.value.length <= 1) return [{ key: '', label: '', items: feed.value }]
+  const groups = roundsNewest.value.map((r) => ({ key: r.id, label: `${r.round} 刷`, items: feed.value.filter((x) => x.round?.id === r.id) }))
+  const loose = feed.value.filter((x) => !x.round)
+  if (loose.length) groups.push({ key: 'loose', label: '其他', items: loose })
+  return groups.filter((g) => g.items.length)
+})
+const closedGroups = ref<Record<string, boolean>>({})
+const isClosed = (key: string) => closedGroups.value[key] ?? key !== latest_.value?.id
+function toggleGroup(key: string) {
+  closedGroups.value = { ...closedGroups.value, [key]: !isClosed(key) }
+}
+/** long notes and reviews show five lines: tap the text to open the rest, tap again to fold it (a short one just opens for editing) */
+const openBodies = ref<Record<string, boolean>>({})
+function tapBody(e: MouseEvent, key: string) {
+  const el = e.currentTarget as HTMLElement
+  if (!openBodies.value[key] && el.scrollHeight <= el.clientHeight + 1) return
+  e.stopPropagation()
+  openBodies.value = { ...openBodies.value, [key]: !openBodies.value[key] }
+}
 function openFeed(x: FeedItem) {
   if (x.kind === 'note') editNote(x.note)
   else if (x.kind === 'day') editDay(x.round, x.log)
@@ -250,7 +273,7 @@ async function removeDay() {
       <img :src="coverUrl" class="size-full scale-125 object-cover opacity-70 blur-2xl" alt="" referrerpolicy="no-referrer" />
       <div class="absolute inset-0 bg-gradient-to-b from-bg/10 via-bg/30 to-bg" />
     </div>
-    <PageHeader :title="''" class="!bg-transparent [&_.circle-btn]:!m-0">
+    <PageHeader :title="''" class="!bg-transparent">
       <template #right>
         <RouterLink v-if="series" :to="`/series/${series.id}`" class="circle-btn" :aria-label="`系列：${series.name}`"><Layers :size="19" /></RouterLink>
         <RouterLink :to="`/work/${work.id}/edit`" class="circle-btn" aria-label="編輯作品"><Pencil :size="19" /></RouterLink>
@@ -262,7 +285,7 @@ async function removeDay() {
       <div class="min-w-0 flex-1 self-end">
         <p class="mb-0.5 text-xs font-semibold text-muted">{{ typeLabel(work.type) }}</p>
         <h1 class="text-lg leading-snug font-bold">{{ work.title }}</h1>
-        <p v-if="work.creators" class="mt-0 text-xs text-muted">{{ work.creators }}</p>
+        <p v-if="work.creators" class="mt-0.5 text-xs text-muted">{{ work.creators }}</p>
         <button v-if="scored" class="mt-1 flex items-center gap-1.5 text-sm font-semibold" :class="scored.rating == null && 'text-xs font-normal text-muted'" @click="rate(scored.id)"><RatingStars :value="scored.rating" :size="14" />{{ scored.rating == null ? '點此評分' : formatRating(scored.rating) }}</button>
         <div class="mt-2 flex flex-wrap gap-1.5">
           <RouterLink v-for="t in tags" :key="t.id" :to="{ path: '/', query: { tag: t.id, type: work.type } }" class="tag">{{ t.name }}</RouterLink>
@@ -278,16 +301,20 @@ async function removeDay() {
       <ul class="space-y-3">
         <li v-for="r in roundsNewest" :key="r.id">
           <div class="card">
-            <button class="w-full text-left" @click="editRound(r)">
-              <span class="flex items-center gap-2">
-                <span v-if="rounds.length > 1" class="text-sm font-bold">{{ r.round }} 刷</span>
-                <StatusPill :status="r.status" />
-                <span v-if="r.rating != null" class="ml-auto font-semibold text-warn">★ {{ formatRating(r.rating) }}</span>
+            <button class="flex w-full items-center gap-3 text-left" @click="editRound(r)">
+              <span class="min-w-0 flex-1">
+                <span class="flex items-center gap-2">
+                  <span v-if="rounds.length > 1" class="text-sm font-semibold">{{ r.round }} 刷</span>
+                  <StatusPill :status="r.status" />
+                  <span v-if="r.rating != null && showsProgress(r)" class="ml-auto flex shrink-0 items-center gap-1 font-semibold text-warn"><Star :size="14" :stroke-width="0" fill="currentColor" />{{ formatRating(r.rating) }}</span>
+                </span>
+                <span class="mt-1.5 flex items-baseline justify-between gap-3 text-xs text-muted">
+                  <span>{{ formatFuzzy(r.start, '未填開始') }} → {{ formatFuzzy(r.end, '進行中') }}<template v-if="r.end && formatSpan(r.start, r.end)">（{{ formatSpan(r.start, r.end) }}）</template></span>
+                  <span v-if="showsProgress(r)" class="shrink-0 font-semibold">{{ progressText(r.progress) }}</span>
+                </span>
               </span>
-              <span class="mt-1.5 flex items-baseline justify-between gap-3 text-xs text-muted">
-                <span>{{ formatFuzzy(r.start, '未填開始') }} → {{ formatFuzzy(r.end, '進行中') }}<template v-if="r.end && formatSpan(r.start, r.end)">（{{ formatSpan(r.start, r.end) }}）</template></span>
-                <span v-if="r.id !== latest_?.id" class="shrink-0 font-semibold">{{ progressText(r.progress) }}</span>
-              </span>
+              <!-- no progress on the right: the score sits centred between the two lines -->
+              <span v-if="r.rating != null && !showsProgress(r)" class="flex shrink-0 items-center gap-1 font-semibold text-warn"><Star :size="14" :stroke-width="0" fill="currentColor" />{{ formatRating(r.rating) }}</span>
             </button>
             <!-- progress sits inside the round it belongs to: - / + change it right away, tapping the number types one in -->
             <div v-if="r.id === latest_?.id" class="-mt-1 -mb-1.5 flex items-center gap-4">
@@ -306,29 +333,35 @@ async function removeDay() {
         <span class="text-sm font-semibold">時間軸</span>
         <button class="flex items-center gap-1" @click="addDay(latest_!)"><Plus :size="13" />補記一天</button>
       </div>
-      <ul class="space-y-2">
-        <li v-for="x in feed" :key="x.key">
-          <button class="card w-full text-left" @click="openFeed(x)">
-            <span class="flex items-center gap-2 text-xs text-muted">
-              <span>{{ formatFuzzy(x.date) }}</span>
-              <span v-if="x.round && rounds.length > 1" class="rounded-full bg-surface-2 px-2 py-0.5 font-medium">{{ x.round.round }} 刷</span>
-              <span v-if="x.kind === 'note' && x.note.progress != null" class="rounded-full bg-surface-2 px-2 py-0.5 font-medium">{{ noteProgress(x.note) }}</span>
-              <span v-if="x.kind === 'note'" class="ml-auto">{{ x.note.kind === 'note' ? '筆記' : '心得' }}</span>
-            </span>
-            <span v-if="x.kind !== 'note' || x.note.title" class="mt-1.5 block font-semibold" :class="x.kind === 'start' && 'text-muted'">
-              <template v-if="x.kind === 'start'">開始</template>
-              <template v-else-if="x.kind === 'end'">完成<span v-if="formatSpan(x.round.start, x.round.end)" class="font-normal text-muted">（{{ formatSpan(x.round.start, x.round.end) }}）</span></template>
-              <template v-else-if="x.kind === 'day'">{{ progressLogText(x.log, x.round.progress.unit) }}</template>
-              <template v-else-if="x.kind === 'note'">{{ x.note.title }}</template>
-            </span>
-            <!-- a colour bar in front of the writing: main colour for a 心得, a soft grey for a 筆記 -->
-            <span v-if="x.kind === 'note' && x.note.body" class="flex gap-3" :class="x.note.title ? 'mt-1' : 'mt-2'">
-              <span class="w-1 shrink-0 rounded-full" :class="x.note.kind === 'note' ? 'bg-muted/40' : 'bg-primary'" />
-              <span class="min-w-0 flex-1 whitespace-pre-wrap" :class="x.note.kind === 'note' ? 'text-sm leading-6' : 'leading-7'">{{ x.note.body }}</span>
-            </span>
-          </button>
-        </li>
-      </ul>
+      <div v-for="g in feedGroups" :key="g.key" class="last:mb-0" :class="isClosed(g.key) ? 'mb-0' : 'mb-3'">
+        <button v-if="g.label" class="flex w-full items-center gap-1.5 px-1 py-1.5 text-sm font-medium" :aria-expanded="!isClosed(g.key)" @click="toggleGroup(g.key)">
+          <ChevronDown :size="16" class="text-muted transition-transform" :class="isClosed(g.key) && '-rotate-90'" />
+          {{ g.label }}<span class="font-normal text-muted">（{{ g.items.length }}）</span>
+        </button>
+        <ul v-show="!isClosed(g.key)" class="space-y-2">
+          <li v-for="x in g.items" :key="x.key">
+            <button class="card w-full text-left" @click="openFeed(x)">
+              <span class="flex items-center gap-2 text-xs text-muted">
+                <span>{{ formatFuzzy(x.date) }}</span>
+                <span v-if="x.kind === 'note'" class="ml-auto flex items-center gap-2">
+                  <template v-if="x.note.progress != null">
+                    <span>{{ noteProgress(x.note) }}</span>
+                    <span class="h-3 w-px bg-line" />
+                  </template>
+                  <span>{{ x.note.kind === 'note' ? '筆記' : '心得' }}</span>
+                </span>
+              </span>
+              <span v-if="x.kind !== 'note' || x.note.title" class="mt-1.5 block font-medium">
+                <template v-if="x.kind === 'start'">開始</template>
+                <template v-else-if="x.kind === 'end'">完成<span v-if="formatSpan(x.round.start, x.round.end)" class="font-normal text-muted">（{{ formatSpan(x.round.start, x.round.end) }}）</span></template>
+                <template v-else-if="x.kind === 'day'">{{ progressLogText(x.log, x.round.progress.unit) }}</template>
+                <template v-else-if="x.kind === 'note'">{{ x.note.title }}</template>
+              </span>
+              <span v-if="x.kind === 'note' && x.note.body" class="block whitespace-pre-wrap" :class="[x.note.title ? 'mt-1' : 'mt-2', x.note.kind === 'note' ? 'text-sm leading-6' : 'leading-7', !openBodies[x.key] && 'line-clamp-5']" @click="tapBody($event, x.key)">{{ x.note.body }}</span>
+            </button>
+          </li>
+        </ul>
+      </div>
       <div v-if="!feed.length" class="py-8 text-center">
         <p class="text-sm font-semibold text-muted">還沒有記錄</p>
         <p class="mt-1.5 text-xs leading-5 text-muted">調整進度時，會自動記下當天看到哪</p>
@@ -349,12 +382,12 @@ async function removeDay() {
         <li v-for="n in noteList" :key="n.note.id">
           <button class="card w-full text-left" @click="editNote(n.note)">
             <div class="flex items-center gap-2 text-xs text-muted">
-              <span>{{ formatFuzzy(n.note.date) }}</span>
               <span v-if="n.round && rounds.length > 1" class="rounded-full bg-surface-2 px-2 py-0.5 font-medium">{{ n.round.round }} 刷</span>
-              <span v-if="n.note.progress != null" class="rounded-full bg-surface-2 px-2 py-0.5 font-medium">{{ noteProgress(n.note) }}</span>
+              <span>{{ formatFuzzy(n.note.date) }}</span>
+              <span v-if="n.note.progress != null" class="ml-auto">{{ noteProgress(n.note) }}</span>
             </div>
             <p v-if="n.note.title" class="mt-2 font-semibold">{{ n.note.title }}</p>
-            <p class="text-sm leading-6 whitespace-pre-wrap" :class="n.note.title ? 'mt-1' : 'mt-2'">{{ n.note.body }}</p>
+            <p class="text-sm leading-6 whitespace-pre-wrap" :class="[n.note.title ? 'mt-1' : 'mt-2', !openBodies[n.note.id] && 'line-clamp-5']" @click="tapBody($event, n.note.id)">{{ n.note.body }}</p>
           </button>
         </li>
       </ul>
