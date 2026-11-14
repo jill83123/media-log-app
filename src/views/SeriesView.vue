@@ -5,9 +5,9 @@ import { useData } from '@/stores/data'
 import { useUi } from '@/stores/ui'
 import { useSettings } from '@/stores/settings'
 import { put, removeSeries } from '@/lib/repo'
-import { formatRating } from '@/lib/ratings'
 import { statusLabel } from '@/lib/meta'
-import { LayoutGrid, List, Pencil, Star } from '@/lib/uiIcons'
+import { LayoutGrid, List, Pencil } from '@/lib/uiIcons'
+import RatingBadge from '@/components/RatingBadge.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import StatusPill from '@/components/StatusPill.vue'
 import WorkCover from '@/components/WorkCover.vue'
@@ -200,7 +200,7 @@ async function del() {
         <p class="min-w-0 flex-1 truncate text-sm font-medium">{{ work.title }}</p>
         <div class="flex shrink-0 flex-col items-end gap-1 text-xs">
           <StatusPill v-if="record" :status="record.status" />
-          <span v-if="record?.rating != null" class="flex items-center gap-1 leading-none font-semibold text-warn"><Star :size="11" :stroke-width="0" fill="currentColor" />{{ formatRating(record.rating) }}</span>
+          <RatingBadge v-if="record?.rating != null" :value="record.rating" class="leading-none" />
         </div>
       </RouterLink>
       <RouterLink v-else :to="`/work/${work.id}`" draggable="false" class="block transition-[scale] duration-200">

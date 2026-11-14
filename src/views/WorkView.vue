@@ -10,10 +10,11 @@ import { useCover } from '@/lib/covers'
 import { logProgress, progressLogId, put, remove, removeRecord, setProgress, startNewRound } from '@/lib/repo'
 import { useData } from '@/stores/data'
 import { useUi } from '@/stores/ui'
-import { Layers, Minus, Pencil, Plus, Star, ChevronDown } from '@/lib/uiIcons'
+import { Layers, Minus, Pencil, Plus, ChevronDown } from '@/lib/uiIcons'
 import FuzzyDateField from '@/components/FuzzyDateField.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import PillTabs from '@/components/PillTabs.vue'
+import RatingBadge from '@/components/RatingBadge.vue'
 import RatingStars from '@/components/RatingStars.vue'
 import NoteSheet from '@/components/NoteSheet.vue'
 import RatingSheet from '@/components/RatingSheet.vue'
@@ -313,15 +314,13 @@ async function removeDay() {
                 <span class="flex items-center gap-2">
                   <span v-if="rounds.length > 1" class="text-sm font-medium">{{ r.round }} 刷</span>
                   <StatusPill :status="r.status" />
-                  <span v-if="r.rating != null && showsProgress(r)" class="ml-auto flex shrink-0 items-center gap-1 font-semibold text-warn"><Star :size="14" :stroke-width="0" fill="currentColor" />{{ formatRating(r.rating) }}</span>
+                  <RatingBadge v-if="r.rating != null" :value="r.rating" class="ml-auto shrink-0" />
                 </span>
                 <span class="mt-2 flex items-baseline justify-between gap-3 text-xs text-muted">
                   <span>{{ formatFuzzy(r.start, '未填開始') }} → {{ formatFuzzy(r.end, '進行中') }}<template v-if="r.end && formatSpan(r.start, r.end)">（{{ formatSpan(r.start, r.end) }}）</template></span>
                   <span v-if="showsProgress(r)" class="shrink-0 font-semibold">{{ progressText(r.progress) }}</span>
                 </span>
               </span>
-              <!-- no progress on the right: the score sits centred between the two lines -->
-              <span v-if="r.rating != null && !showsProgress(r)" class="flex shrink-0 items-center gap-1 font-semibold text-warn"><Star :size="14" :stroke-width="0" fill="currentColor" />{{ formatRating(r.rating) }}</span>
             </button>
             <!-- progress sits inside the round it belongs to: - / + change it right away, tapping the number types one in -->
             <div v-if="r.id === latest_?.id" class="-mb-1.5 flex items-center gap-3">
