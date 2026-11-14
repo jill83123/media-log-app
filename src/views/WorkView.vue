@@ -302,7 +302,7 @@ async function removeDay() {
     <template v-if="rec && tab === 'log'">
       <!-- one card per round: tap it to change its dates, status or score -->
       <div class="mb-2 flex items-center justify-between px-1 text-xs text-muted">
-        <span class="text-sm font-semibold">進度</span>
+        <span class="font-semibold">進度</span>
         <button class="flex items-center gap-1" @click="startRound()"><Plus :size="13" />新增</button>
       </div>
       <ul class="space-y-3">
@@ -336,11 +336,11 @@ async function removeDay() {
 
       <!-- everything in one list, newest first: tap a line to edit it -->
       <div class="mt-5 mb-2 flex items-center justify-between px-1 text-xs text-muted">
-        <span class="text-sm font-semibold">時間軸</span>
+        <span class="font-semibold">時間軸</span>
         <button class="flex items-center gap-1" @click="addDay(latest_!)"><Plus :size="13" />補記</button>
       </div>
       <div v-for="g in feedGroups" :key="g.key" class="last:mb-0" :class="isClosed(g.key) ? 'mb-0' : 'mb-3'">
-        <button v-if="g.label" class="flex w-full items-center gap-1 px-1 py-1.5 text-sm font-medium text-muted" :aria-expanded="!isClosed(g.key)" @click="toggleGroup(g.key)">
+        <button v-if="g.label" class="flex w-full items-center gap-1 px-1 py-1.5 text-xs font-medium text-muted" :aria-expanded="!isClosed(g.key)" @click="toggleGroup(g.key)">
           {{ g.label }}
           <ChevronDown :size="16" class="text-muted transition-transform" :class="isClosed(g.key) && '-rotate-90'" />
         </button>
@@ -363,7 +363,7 @@ async function removeDay() {
                 <template v-else-if="x.kind === 'day'">{{ progressLogText(x.log, x.round.progress.unit) }}</template>
                 <template v-else-if="x.kind === 'note'"><span v-if="x.note.title">{{ x.note.title }}</span><span v-else class="font-normal text-muted">無標題</span></template>
               </span>
-              <span v-if="x.kind === 'note' && x.note.body" class="block whitespace-pre-wrap" :class="[x.note.title ? 'mt-1' : 'mt-0', x.note.kind === 'note' ? 'text-sm leading-6' : 'leading-7', !openBodies[x.key] && 'line-clamp-5']" @click="tapBody($event, x.key)">{{ x.note.body }}</span>
+              <span v-if="x.kind === 'note' && x.note.body" class="block whitespace-pre-wrap" :class="[x.note.title ? 'mt-0.5' : 'mt-1', 'text-sm leading-[1.45]', !openBodies[x.key] && 'line-clamp-5']" @click="tapBody($event, x.key)">{{ x.note.body }}</span>
             </button>
           </li>
         </ul>
@@ -376,7 +376,8 @@ async function removeDay() {
 
     <!-- 心得 and 筆記 each have their own page -->
     <template v-else-if="tab !== 'log'">
-      <div class="mb-3 flex justify-end px-1 text-xs text-muted">
+      <div class="mb-2 flex items-center justify-between px-1 text-xs text-muted">
+        <span>共 {{ noteList.length }} 筆</span>
         <button class="flex items-center gap-1" @click="newNote(tab === 'memo' ? 'note' : undefined)"><Plus :size="13" />{{ tab === 'memo' ? '寫筆記' : '寫心得' }}</button>
       </div>
       <p v-if="!noteList.length" class="py-16 text-center text-sm text-muted">{{ tab === 'memo' ? '還沒有筆記，看到哪、想到什麼都可以隨手記。' : '還沒有心得，想到什麼都可以隨時寫。' }}</p>
@@ -389,7 +390,7 @@ async function removeDay() {
               <span v-if="n.note.progress != null" class="ml-auto">{{ noteProgress(n.note) }}</span>
             </div>
             <p class="mt-1.5 font-medium" :class="!n.note.title && 'font-normal text-muted'">{{ n.note.title || '無標題' }}</p>
-            <p class="text-sm leading-6 whitespace-pre-wrap" :class="[n.note.title ? 'mt-1' : 'mt-0',!openBodies[n.note.id] && 'line-clamp-5']" @click="tapBody($event, n.note.id)">{{ n.note.body }}</p>
+            <p class="text-sm leading-[1.45] whitespace-pre-wrap" :class="[n.note.title ? 'mt-0.5' : 'mt-1', !openBodies[n.note.id] && 'line-clamp-5']" @click="tapBody($event, n.note.id)">{{ n.note.body }}</p>
           </button>
         </li>
       </ul>
