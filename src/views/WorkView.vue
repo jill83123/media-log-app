@@ -52,7 +52,10 @@ const workNotes = computed(() => data.notes.filter((n) => n.workId === work.valu
 /** the newest round that had started by the note's date and had not ended before it */
 function roundOfNote(n: WorkNote): Rec | undefined {
   const day = earliest(n.date)
-  return [...rounds.value].reverse().find((r) => (!r.start || earliest(r.start) <= day) && (!r.end || day <= latest(r.end)))
+  const hit = [...rounds.value].reverse().find((r) => (!r.start || earliest(r.start) <= day) && (!r.end || day <= latest(r.end)))
+  if (hit) return hit
+  // between two rounds, or after the last one ended: the newest round that had already started by then, else the first
+  return [...rounds.value].reverse().find((r) => r.start && earliest(r.start) <= day) ?? rounds.value[0]
 }
 /** the unit a note's progress is counted in: its round's, or the newest round's */
 const noteUnit = (n: WorkNote) => (roundOfNote(n) ?? latest_.value)?.progress.unit ?? ''

@@ -230,7 +230,7 @@ const ratingSteps = computed(() => [0, ...mergeRatings(settings.s.ratings).map((
             </div>
             <div class="flex shrink-0 flex-col items-end gap-1.5 text-xs">
               <StatusPill :status="record?.status ?? 'todo'" />
-              <p v-if="record?.status === 'done' && record.rating != null" class="flex items-center gap-1 leading-none font-semibold text-warn"><Star :size="11" :stroke-width="0" fill="currentColor" />{{ formatRating(record.rating) }}</p>
+              <p v-if="record?.rating != null" class="flex items-center gap-1 leading-none font-semibold text-warn"><Star :size="11" :stroke-width="0" fill="currentColor" />{{ formatRating(record.rating) }}</p>
             </div>
           </RouterLink>
         </li>
