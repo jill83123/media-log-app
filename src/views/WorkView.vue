@@ -46,7 +46,7 @@ const coverUrl = useCover(() => work.value?.cover)
 /** the header shows the score of the newest round that has one; with none yet it offers to rate the newest round */
 const scored = computed(() => [...rounds.value].reverse().find((r) => r.rating != null) ?? latest_.value)
 
-const tab = ref<'log' | 'review' | 'memo'>('log')
+const tab = ref<'log' | 'review' | 'memo'>(route.query.tab === 'review' ? 'review' : 'log')
 
 // ---- notes: each has a date; the round it belongs to is worked out from the dates ----
 const workNotes = computed(() => data.notes.filter((n) => n.workId === work.value?.id && (n.body || n.title)))

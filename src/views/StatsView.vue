@@ -11,6 +11,8 @@ import PopupDialog from '@/components/PopupDialog.vue'
 import { ChevronDown } from '@/lib/uiIcons'
 import FuzzyDateField from '@/components/FuzzyDateField.vue'
 import OverviewTab from '@/components/stats/OverviewTab.vue'
+import ReviewsTab from '@/components/stats/ReviewsTab.vue'
+import PillTabs from '@/components/PillTabs.vue'
 
 const data = useData()
 /** one type at a time to begin with (the first in the user's order), so numbers and lists are not a mix of animes and novels */
@@ -20,6 +22,8 @@ const types = computed<WorkType[]>(() => {
   const v = settings.s.libraryType || workTypes()[0]?.value
   return v ? [v] : []
 })
+const tab = ref<'overview' | 'reviews'>('overview')
+const typeWorks = computed(() => data.works.filter((w) => types.value.includes(w.type)))
 const rangeId = ref<RangeId>('year')
 const custom = ref({ from: '', to: '' })
 
@@ -103,5 +107,7 @@ const rangeLabel = computed(() => {
     </form>
   </PopupDialog>
 
-  <OverviewTab :summary="summary" :events="allEvents" :range="range" />
+  <PillTabs v-model="tab" size="sm" class="mb-4" :options="[{ value: 'overview', label: '總覽' }, { value: 'reviews', label: '心得' }]" />
+  <OverviewTab v-if="tab === 'overview'" :summary="summary" :events="allEvents" :range="range" />
+  <ReviewsTab v-else :works="typeWorks" :notes="data.notes" :records="data.records" :range="range" />
 </template>
