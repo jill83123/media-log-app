@@ -181,7 +181,7 @@ const feed = computed<FeedItem[]>(() => {
     const round = rounds.value.find((r) => r.id === l.recordId)
     if (round && l.workId === work.value?.id) out.push({ key: l.id, kind: 'day', date: l.date, round, rank: 3, log: l })
   }
-  for (const n of workNotes.value) out.push({ key: n.id, kind: 'note', date: n.date, round: roundOfNote(n), rank: 2, note: n })
+  for (const n of workNotes.value) out.push({ key: n.id, kind: 'note', date: n.date, round: roundOfNote(n), rank: n.kind === 'note' ? 3.5 : 5, note: n })
   const day = (x: FeedItem) => latest(x.date) || ''
   return out.sort((a, b) => (day(a) === day(b) ? (b.round?.round ?? 0) - (a.round?.round ?? 0) || b.rank - a.rank : day(a) < day(b) ? 1 : -1))
 })
@@ -357,8 +357,8 @@ async function removeDay() {
                 </span>
               </span>
               <span class="mt-1.5 block font-medium">
-                <template v-if="x.kind === 'start'">開始</template>
-                <template v-else-if="x.kind === 'end'">完成<span v-if="formatSpan(x.round.start, x.round.end)" class="font-normal text-muted">（{{ formatSpan(x.round.start, x.round.end) }}）</span></template>
+                <template v-if="x.kind === 'start'"><span class="relative -top-px mr-2 inline-block h-4 w-[3px] rounded-full bg-primary align-middle" />開始</template>
+                <template v-else-if="x.kind === 'end'"><span class="relative -top-px mr-2 inline-block h-4 w-[3px] rounded-full bg-primary align-middle" />完成<span v-if="formatSpan(x.round.start, x.round.end)" class="font-normal text-muted">（{{ formatSpan(x.round.start, x.round.end) }}）</span></template>
                 <template v-else-if="x.kind === 'day'">{{ progressLogText(x.log, x.round.progress.unit) }}</template>
                 <template v-else-if="x.kind === 'note'"><span v-if="x.note.title">{{ x.note.title }}</span><span v-else class="font-normal text-muted">無標題</span></template>
               </span>
