@@ -48,8 +48,12 @@ function save() {
 
 /** a full-screen editor: it follows the visible area, so the on-screen keyboard never covers the writing space */
 const height = ref('100dvh')
+/** iOS scrolls the page up when the keyboard opens; follow that offset so the editor stays on the visible part */
+const top = ref(0)
 function fit() {
-  height.value = window.visualViewport ? `${window.visualViewport.height}px` : '100dvh'
+  const vv = window.visualViewport
+  height.value = vv ? `${vv.height}px` : '100dvh'
+  top.value = vv ? vv.offsetTop : 0
 }
 let prevOverflow = ''
 watch(
@@ -60,9 +64,11 @@ watch(
       document.body.style.overflow = 'hidden'
       fit()
       window.visualViewport?.addEventListener('resize', fit)
+      window.visualViewport?.addEventListener('scroll', fit)
     } else if (!v && old) {
       document.body.style.overflow = prevOverflow
       window.visualViewport?.removeEventListener('resize', fit)
+      window.visualViewport?.removeEventListener('scroll', fit)
     }
   },
   { immediate: true },
@@ -70,6 +76,7 @@ watch(
 onBeforeUnmount(() => {
   if (open.value) document.body.style.overflow = prevOverflow
   window.visualViewport?.removeEventListener('resize', fit)
+  window.visualViewport?.removeEventListener('scroll', fit)
 })
 const route = useRoute()
 watch(
@@ -81,7 +88,9 @@ watch(
 <template>
   <Teleport to="body">
     <Transition name="fade">
-      <div v-if="open" class="fixed inset-x-0 top-0 z-40 mx-auto flex w-full max-w-xl flex-col bg-bg" :style="{ height }" role="dialog" aria-modal="true" @keydown.esc="close">
+      <!-- the outer layer always covers the whole screen, so the page never shows through the keyboard's translucent toolbar on iOS -->
+      <div v-if="open" class="fixed inset-0 z-40 bg-bg">
+      <div class="mx-auto flex w-full max-w-xl flex-col bg-bg" :style="{ height, transform: `translateY(${top}px)` }" role="dialog" aria-modal="true" @keydown.esc="close">
         <div class="flex min-h-14 shrink-0 items-center justify-between gap-3 px-4 py-2">
           <button class="circle-btn -ml-2.5" aria-label="返回" @click="close"><ChevronLeft :size="22" /></button>
           <h2 class="text-base font-bold">{{ isNew ? '寫' : '編輯' }}{{ label }}</h2>
@@ -107,6 +116,7 @@ watch(
             <button class="btn btn-primary min-w-0 flex-1 disabled:opacity-40" :disabled="empty" @click="save">儲存</button>
           </div>
         </div>
+      </div>
       </div>
     </Transition>
   </Teleport>
