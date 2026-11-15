@@ -60,7 +60,7 @@ export function progressText(p: { current: number; total: number; unit: string; 
 }
 /** "進度 5～6%" when the day's start is known, "進度 4%" when only where it got to is */
 export function progressLogText(l: { value: number; from?: number }, unit: string): string {
-  const range = l.from != null && l.from + 1 < l.value ? `${l.from + 1}～` : ''
+  const range = l.from != null && l.from < l.value ? `${l.from}～` : ''
   return unit === '%' ? `進度 ${range}${l.value}%` : `進度 ${range}${l.value} ${unit}`
 }
 export const progressRatio = (p: { current: number; total: number; infinite: boolean }) =>
