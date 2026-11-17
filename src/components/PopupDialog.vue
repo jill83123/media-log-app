@@ -7,7 +7,7 @@ import { lockScroll } from '@/lib/scrollLock'
  * The content (usually a `.card`) comes in the slot; tapping outside closes it.
  * It is centred in the part of the screen that can actually be seen: on a phone the on-screen keyboard shrinks the visual
  * viewport, so the window moves up to sit above the keyboard; on a computer there is no keyboard and it stays in the middle.
- * `--pop-h` is that visible height, for a card's own max-height. The first field is focused when it opens (unless `no-focus`).
+ * `--pop-h` is that visible height, for a card's own max-height. The first field is focused when it opens (unless `no-focus`, or on touch screens).
  */
 const props = defineProps<{ noFocus?: boolean; above?: boolean }>()
 const open = defineModel<boolean>({ required: true })
@@ -36,7 +36,8 @@ watch(
     }
     if (!o) return
     fit()
-    if (props.noFocus) return
+    // on touch screens, focusing pops the keyboard; only auto-focus with a mouse/keyboard
+    if (props.noFocus || !matchMedia('(pointer: fine)').matches) return
     await nextTick()
     root.value?.querySelector<HTMLElement>('input, textarea')?.focus()
   },

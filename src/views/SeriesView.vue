@@ -218,7 +218,7 @@ async function del() {
       <div v-if="editOpen" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-4" @click.self="editOpen = false" @keydown.esc="editOpen = false">
         <form class="card w-full max-w-[21rem] space-y-4 p-5 shadow-xl" role="dialog" aria-label="編輯系列" @submit.prevent="save">
           <h2 class="text-lg leading-snug font-bold">編輯系列</h2>
-          <input v-model="nameDraft" class="input" placeholder="系列名稱" autofocus />
+          <input v-model="nameDraft" class="input" placeholder="系列名稱" />
           <div class="flex gap-3">
             <button type="button" class="btn btn-ghost shrink-0 px-3.5 text-sm text-danger" @click="del">刪除</button>
             <button type="submit" class="btn btn-primary min-w-0 flex-1 disabled:opacity-40" :disabled="!nameDraft.trim()">儲存</button>
