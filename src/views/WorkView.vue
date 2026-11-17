@@ -249,7 +249,13 @@ async function saveDay() {
   if (!r || dayError.value) return
   // moving an entry to another day: the old one goes away (the new day's entry, if any, is replaced)
   if (dayLogId.value && dayLogId.value !== progressLogId(r.id, dayDate.value)) await remove('progressLogs', dayLogId.value)
+  const old = dayLogId.value ? data.progressLogs.find((l) => l.id === dayLogId.value) : undefined
   await logProgress(r, dayValue.value, dayDate.value, dayFrom.value === '' ? undefined : Number(dayFrom.value))
+  // the next day continued from where this one ended: keep it connected
+  if (old && old.value !== dayValue.value) {
+    const next = data.progressLogs.filter((l) => l.recordId === r.id && l.date > dayDate.value).sort((a, b) => a.date.localeCompare(b.date))[0]
+    if (next && next.from === old.value) await logProgress(r, next.value, next.date, Math.min(dayValue.value, next.value))
+  }
   // the round stands where its latest day says: an entry on (or after) the newest day moves the current progress too
   const newest = data.progressLogs.every((l) => l.recordId !== r.id || l.id === progressLogId(r.id, dayDate.value) || l.date <= dayDate.value)
   if (newest && dayValue.value !== r.progress.current) {
@@ -261,9 +267,28 @@ async function saveDay() {
   }
   dayOpen.value = false
 }
+/** deleting the newest day pulls the round back to where the day before ended */
+function removeFallback() {
+  const r = dayRec.value
+  const mine = data.progressLogs.filter((l) => l.recordId === r?.id)
+  const cur = mine.find((l) => l.id === dayLogId.value)
+  if (!r || !cur || mine.some((l) => l.id !== cur.id && l.date > cur.date)) return null
+  const prev = mine.filter((l) => l.date < cur.date).sort((a, b) => b.date.localeCompare(a.date))[0]
+  return prev ? prev.value : (cur.from ?? 0)
+}
 async function removeDay() {
-  if (dayLogId.value && (await ui.confirm('刪除這天的記錄？', { message: '只刪除這一天的紀錄，不會改變目前進度。', danger: true, confirmText: '刪除' }))) {
+  const r = dayRec.value
+  const back = removeFallback()
+  const moves = r != null && back != null && back !== r.progress.current
+  const message = back == null ? '只刪除這一天的紀錄，不會改變目前進度。' : moves ? `進度會退回到 ${r!.progress.unit === '%' ? `${back}%` : `${back} ${r!.progress.unit}`.trim()}。` : '只刪除這一天的紀錄。'
+  if (dayLogId.value && (await ui.confirm('刪除這天的記錄？', { message, danger: true, confirmText: '刪除' }))) {
     await remove('progressLogs', dayLogId.value)
+    if (moves) {
+      const p = r!.progress
+      const wasDone = r!.status === 'done' && !p.infinite && p.total > 0 && back! < p.total
+      await put('records', { ...r!, progress: { ...p, current: back! }, ...(wasDone ? { status: 'doing' as const, end: '' } : {}), updatedAt: Date.now() })
+      if (wasDone) ui.toast('進度未滿，已改回「在看」', 'info')
+    }
     dayOpen.value = false
   }
 }

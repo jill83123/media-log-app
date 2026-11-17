@@ -92,7 +92,9 @@ export async function logProgress(rec: Pick<Rec, 'id' | 'workId'>, value: number
 /** an automatic entry: the day's range starts where the round stood before the day's first change */
 export async function logChange(rec: Pick<Rec, 'id' | 'workId'>, before: number, value: number): Promise<void> {
   const day = (await db.progressLogs.get(progressLogId(rec.id, today())))?.from
-  await logProgress(rec, value, today(), day ?? before)
+  // a day's range continues from the latest earlier day, even if that day was edited after today's entry was made
+  const prev = (await db.progressLogs.where('recordId').equals(rec.id).toArray()).filter((l) => l.date < today()).sort((a, b) => b.date.localeCompare(a.date))[0]
+  await logProgress(rec, value, today(), prev?.value ?? day ?? before)
 }
 
 export async function setStatus(rec: Rec, status: Status): Promise<Rec> {
