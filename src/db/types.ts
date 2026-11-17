@@ -58,6 +58,18 @@ export interface Series extends Base {
   /** position in the user's own order */
   order?: number
   cover?: string
+  /** the whole series' score, like a work's */
+  rating?: number
+  /** overall thoughts on the whole series (總心得), as many as you like, each with its own date */
+  reviews?: SeriesReview[]
+}
+
+export interface SeriesReview {
+  id: string
+  title?: string
+  date: FuzzyDate
+  body: string
+  updatedAt: number
 }
 
 /** One go at a work (a "round"); watching it again starts a new record and keeps the old ones. */

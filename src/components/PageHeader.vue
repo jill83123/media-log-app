@@ -29,7 +29,9 @@ function goBack() {
       <h1 class="truncate text-xl font-bold">
         <slot name="title">{{ title }}</slot>
       </h1>
-      <p v-if="subtitle" class="truncate text-xs text-muted">{{ subtitle }}</p>
+      <slot name="subtitle">
+        <p v-if="subtitle" class="truncate text-xs text-muted">{{ subtitle }}</p>
+      </slot>
     </div>
     <div class="-mr-2.5 flex min-w-fit flex-1 basis-0 items-center justify-end gap-2">
       <slot name="right" />

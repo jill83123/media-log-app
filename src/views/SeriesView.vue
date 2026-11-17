@@ -1,12 +1,20 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useData } from '@/stores/data'
 import { useUi } from '@/stores/ui'
 import { useSettings } from '@/stores/settings'
 import { put, removeSeries } from '@/lib/repo'
 import { statusLabel } from '@/lib/meta'
-import { LayoutGrid, List, Pencil } from '@/lib/uiIcons'
+import { formatFuzzy, today } from '@/lib/date'
+import { uid } from '@/lib/id'
+import type { SeriesReview, Work, WorkNote } from '@/db/types'
+import { formatRating } from '@/lib/ratings'
+import RatingStars from '@/components/RatingStars.vue'
+import RatingSheet from '@/components/RatingSheet.vue'
+import PillTabs from '@/components/PillTabs.vue'
+import NoteSheet from '@/components/NoteSheet.vue'
+import { ChevronDown, LayoutGrid, List, Pencil, Plus } from '@/lib/uiIcons'
 import RatingBadge from '@/components/RatingBadge.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import StatusPill from '@/components/StatusPill.vue'
@@ -156,7 +164,69 @@ async function save() {
   const v = nameDraft.value.trim()
   if (!series.value || !v) return
   editOpen.value = false
-  if (v !== series.value.name) await put('series', { ...series.value, name: v })
+  if (v !== series.value.name) await put('series', { ...JSON.parse(JSON.stringify(series.value)), name: v })
+}
+
+// ---- 心得: several, each with a date, newest first ----
+const ratingOpen = ref(false)
+const ratingDraft = computed<number | null>({
+  get: () => series.value?.rating ?? null,
+  set: (v) => {
+    if (series.value) void put('series', JSON.parse(JSON.stringify({ ...series.value, rating: v ?? undefined })))
+  },
+})
+/** long reviews show five lines: tap the text to open the rest, tap again to fold it (a short one just opens as usual) */
+const openBodies = ref<Record<string, boolean>>({})
+function tapBody(e: MouseEvent, key: string) {
+  const el = e.currentTarget as HTMLElement
+  if (!openBodies.value[key] && el.scrollHeight <= el.clientHeight + 1) return
+  e.stopPropagation()
+  e.preventDefault()
+  openBodies.value = { ...openBodies.value, [key]: !openBodies.value[key] }
+}
+const tab = ref<'works' | 'review'>(route.query.tab === 'review' ? 'review' : 'works')
+// keep the tab in the address, so coming back from a work lands on the same tab
+watch(tab, (t) => void router.replace({ query: { ...route.query, tab: t === 'review' ? 'review' : undefined } }))
+const noteOpen = ref(false)
+const noteNew = ref(true)
+const noteDraft = ref<WorkNote>({ id: '', updatedAt: 0, workId: '', date: '', body: '' })
+const ownReviews = computed(() => series.value?.reviews ?? [])
+/** the series' own reviews and the reviews of its works, newest first; a work's one carries the work (it opens on the work's page) */
+const byNewest = (a: { date: string; updatedAt: number }, b: { date: string; updatedAt: number }) => (b.date || '').localeCompare(a.date || '') || b.updatedAt - a.updatedAt
+/** the series' own reviews, pinned at the top where they can be folded (open by default) */
+const mine = computed(() => [...ownReviews.value].sort(byNewest))
+const mineOpen = ref(true)
+const reviews = computed(() => {
+  const ids = new Map(items.value.map((x) => [x.work.id, x.work]))
+  return data.notes
+    .filter((n) => n.kind !== 'note' && !n.deleted && ids.has(n.workId))
+    .map((n) => ({ id: n.id, title: n.title, date: n.date, body: n.body, updatedAt: n.updatedAt, work: ids.get(n.workId) as Work }))
+    .sort(byNewest)
+})
+const worksOpen = ref(true)
+const reviewCount = computed(() => mine.value.length + reviews.value.length)
+/** the editor is the work notes' one: a review of the series is shaped like a note */
+const asNote = (r: SeriesReview): WorkNote => ({ ...r, workId: series.value!.id })
+function newReview() {
+  noteNew.value = true
+  noteDraft.value = { id: uid(), updatedAt: Date.now(), workId: series.value!.id, date: today(), body: '' }
+  noteOpen.value = true
+}
+function editReview(r: SeriesReview) {
+  noteNew.value = false
+  noteDraft.value = asNote(r)
+  noteOpen.value = true
+}
+async function saveReview(n: WorkNote) {
+  if (!series.value) return
+  const r: SeriesReview = { id: n.id, title: n.title, date: n.date, body: n.body, updatedAt: Date.now() }
+  const list = ownReviews.value.filter((x) => x.id !== r.id)
+  await put('series', { ...JSON.parse(JSON.stringify(series.value)), reviews: [...list, r] })
+}
+async function removeReview() {
+  if (!series.value || !(await ui.confirm('刪除這則心得？', { danger: true, confirmText: '刪除' }))) return
+  const id = noteDraft.value.id
+  await put('series', { ...JSON.parse(JSON.stringify(series.value)), reviews: (series.value.reviews ?? []).filter((x) => x.id !== id) })
 }
 async function del() {
   if (!series.value || !(await ui.confirm('刪除系列？', { message: '作品會保留，只是不再屬於這個系列。', danger: true, confirmText: '刪除' }))) return
@@ -169,15 +239,63 @@ async function del() {
 <template>
   <PageHeader :title="series?.name ?? ''">
     <template #right>
-      <button class="circle-btn" :aria-label="view === 'list' ? '改為只顯示封面' : '改為列表'" @click="settings.s.seriesView = view === 'list' ? 'grid' : 'list'">
+      <button v-if="tab === 'works'" class="circle-btn" :aria-label="view === 'list' ? '改為只顯示封面' : '改為列表'" @click="settings.s.seriesView = view === 'list' ? 'grid' : 'list'">
         <LayoutGrid v-if="view === 'list'" :size="19" />
         <List v-else :size="19" />
       </button>
+      <button v-if="tab === 'review'" class="circle-btn" aria-label="寫心得" @click="newReview"><Plus :size="19" /></button>
       <button class="circle-btn" aria-label="編輯系列" @click="edit"><Pencil :size="19" /></button>
     </template>
+    <!-- the score sits under the name, inside the header, so the icons stay centred on both -->
+    <template #subtitle>
+      <button v-if="series" type="button" class="mx-auto mt-0.5 flex items-center gap-1.5 text-sm font-semibold" :class="series.rating == null && 'text-xs font-normal text-muted'" @click="ratingOpen = true"><RatingStars :value="series.rating ?? null" :size="14" />{{ series.rating == null ? '點此評分' : formatRating(series.rating) }}</button>
+    </template>
   </PageHeader>
-  <p class="mb-2 px-1 text-xs text-muted">共 {{ items.length }} 個</p>
-  <TransitionGroup ref="box" tag="ul" :name="dragging || settling ? 'reorder' : 'no-move'" class="relative" :class="view === 'grid' ? 'grid grid-cols-3 gap-x-3 gap-y-4' : 'space-y-2'" @touchmove="onTouchMove">
+  <PillTabs v-model="tab" size="sm" class="mb-4" :options="[{ value: 'works', label: `作品（${items.length}）` }, { value: 'review', label: reviewCount ? `心得（${reviewCount}）` : '心得' }]" />
+  <section v-if="series && tab === 'review'" class="mb-4">
+    <p v-if="!reviewCount" class="py-10 text-center text-sm text-muted">還沒有心得，對整個系列的想法都可以寫在這裡。</p>
+    <!-- 系列心得: pinned at the top, foldable -->
+    <div v-if="mine.length" :class="mineOpen ? 'mb-4' : 'mb-2'">
+      <button type="button" class="flex w-full items-center gap-1 px-1 py-1.5 text-xs font-medium text-muted" :aria-expanded="mineOpen" @click="mineOpen = !mineOpen">
+        系列心得（{{ mine.length }}）
+        <ChevronDown :size="16" class="text-muted transition-transform" :class="!mineOpen && '-rotate-90'" />
+      </button>
+      <ul v-show="mineOpen" class="space-y-3">
+        <li v-for="r in mine" :key="r.id">
+          <button type="button" class="card block w-full text-left" @click="editReview(r)">
+            <p v-if="r.title" class="font-medium">{{ r.title }}</p>
+            <p class="text-sm leading-[1.45] whitespace-pre-wrap" :class="[r.title && 'mt-0.5', !openBodies[r.id] && 'line-clamp-5']" @click="tapBody($event, r.id)">{{ r.body }}</p>
+            <!-- same small print as the works' reviews: what it is about, and the date -->
+            <div class="mt-2 flex items-center gap-2 text-xs text-muted">
+              <span class="min-w-0 truncate">系列</span>
+              <span class="ml-auto shrink-0">{{ formatFuzzy(r.date) }}</span>
+            </div>
+          </button>
+        </li>
+      </ul>
+    </div>
+    <!-- 作品心得: every work's reviews in one foldable group -->
+    <div v-if="reviews.length">
+      <button type="button" class="flex w-full items-center gap-1 px-1 py-1.5 text-xs font-medium text-muted" :aria-expanded="worksOpen" @click="worksOpen = !worksOpen">
+        作品心得（{{ reviews.length }}）
+        <ChevronDown :size="16" class="text-muted transition-transform" :class="!worksOpen && '-rotate-90'" />
+      </button>
+      <ul v-show="worksOpen" class="space-y-3">
+        <li v-for="r in reviews" :key="r.id">
+          <RouterLink :to="{ path: `/work/${r.work.id}`, query: { tab: 'review' } }" class="card block w-full text-left">
+            <p v-if="r.title" class="font-medium">{{ r.title }}</p>
+            <p class="text-sm leading-[1.45] whitespace-pre-wrap" :class="[r.title && 'mt-0.5', !openBodies[r.id] && 'line-clamp-5']" @click="tapBody($event, r.id)">{{ r.body }}</p>
+            <!-- which work it is about, with the date, as small print at the bottom -->
+            <div class="mt-2 flex items-center gap-2 text-xs text-muted">
+              <span class="min-w-0 truncate">{{ r.work.title }}</span>
+              <span class="ml-auto shrink-0">{{ formatFuzzy(r.date) }}</span>
+            </div>
+          </RouterLink>
+        </li>
+      </ul>
+    </div>
+  </section>
+  <TransitionGroup v-show="tab === 'works'" ref="box" tag="ul" :name="dragging || settling ? 'reorder' : 'no-move'" class="relative" :class="view === 'grid' ? 'grid grid-cols-3 gap-x-3 gap-y-4' : 'space-y-2'" @touchmove="onTouchMove">
     <li
       v-for="{ work, record } in shown"
       :key="work.id"
@@ -212,6 +330,9 @@ async function del() {
       </RouterLink>
     </li>
   </TransitionGroup>
+
+  <RatingSheet v-model:open="ratingOpen" v-model="ratingDraft" />
+  <NoteSheet v-model:open="noteOpen" :note="noteDraft" :is-new="noteNew" @save="saveReview" @remove="removeReview" />
 
   <Teleport to="body">
     <Transition name="fade">

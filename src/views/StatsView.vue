@@ -109,5 +109,5 @@ const rangeLabel = computed(() => {
 
   <PillTabs v-model="tab" size="sm" class="mb-4" :options="[{ value: 'overview', label: '總覽' }, { value: 'reviews', label: '心得' }]" />
   <OverviewTab v-if="tab === 'overview'" :summary="summary" :events="allEvents" :range="range" />
-  <ReviewsTab v-else :works="typeWorks" :notes="data.notes" :records="data.records" :range="range" />
+  <ReviewsTab v-else :works="typeWorks" :notes="data.notes" :series="data.series":records="data.records" :range="range" />
 </template>
