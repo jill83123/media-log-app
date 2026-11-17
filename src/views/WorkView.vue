@@ -407,7 +407,7 @@ async function removeDay() {
         <span>共 {{ noteList.length }} 筆</span>
         <button class="flex items-center gap-1" @click="newNote(tab === 'memo' ? 'note' : undefined)"><Plus :size="13" />{{ tab === 'memo' ? '寫筆記' : '寫心得' }}</button>
       </div>
-      <p v-if="!noteList.length" class="py-16 text-center text-sm text-muted">{{ tab === 'memo' ? '還沒有筆記，看到哪、想到什麼都可以隨手記。' : '還沒有心得，想到什麼都可以隨時寫。' }}</p>
+      <p v-if="!noteList.length" class="empty-state [--empty-top:22rem]">{{ tab === 'memo' ? '還沒有筆記，看到哪、想到什麼都可以隨手記。' : '還沒有心得，想到什麼都可以隨時寫。' }}</p>
       <ul class="space-y-3">
         <li v-for="n in noteList" :key="n.note.id">
           <button class="card w-full text-left" @click="editNote(n.note)">
@@ -466,5 +466,5 @@ async function removeDay() {
     <RatingSheet v-model:open="ratingOpen" v-model="ratingDraft" />
     <RecordSheet v-if="rec" v-model:open="recordOpen" :record="rec" :removable="rounds.length > 1" @remove="removeRound" />
   </div>
-  <p v-else-if="data.ready" class="py-16 text-center text-muted">找不到這個作品</p>
+  <p v-else-if="data.ready" class="empty-state [--empty-top:6rem]">找不到這個作品</p>
 </template>

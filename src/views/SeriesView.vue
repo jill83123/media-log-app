@@ -259,7 +259,7 @@ async function del() {
   </PageHeader>
   <PillTabs v-model="tab" size="sm" class="mb-4" :options="[{ value: 'works', label: `作品（${items.length}）` }, { value: 'review', label: reviewCount ? `心得（${reviewCount}）` : '心得' }]" />
   <section v-if="series && tab === 'review'" class="mb-4">
-    <p v-if="!reviewCount" class="py-10 text-center text-sm text-muted">還沒有心得，對整個系列的想法都可以寫在這裡。</p>
+    <p v-if="!reviewCount" class="empty-state [--empty-top:16rem]">還沒有心得，對整個系列的想法都可以寫在這裡。</p>
     <!-- 系列心得: pinned at the top, foldable -->
     <div v-if="mine.length" :class="mineOpen ? 'mb-4' : 'mb-2'">
       <button type="button" class="flex w-full items-center gap-1 px-1 py-1.5 text-xs font-medium text-muted" :aria-expanded="mineOpen" @click="mineOpen = !mineOpen">

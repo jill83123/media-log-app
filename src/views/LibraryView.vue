@@ -195,7 +195,7 @@ const ratingSteps = computed(() => [0, ...mergeRatings(settings.s.ratings).map((
     </div>
     <button class="text-xs text-muted underline underline-offset-2" @click="tryDemo">先載入示範資料看看</button>
   </div>
-  <p v-else-if="data.ready && !rows.length" class="grid min-h-[45dvh] place-items-center pt-6 text-center text-sm text-muted">沒有符合的作品</p>
+  <p v-else-if="data.ready && !rows.length" class="empty-state [--empty-top:14rem]">沒有符合的作品</p>
 
   <!-- a tag's page: just the works, one row each, with the best rating -->
   <ul v-if="tagName" class="space-y-2.5">

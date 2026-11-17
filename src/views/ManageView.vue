@@ -146,7 +146,7 @@ async function del() {
       <button class="inline-flex size-10 items-center justify-center text-ink transition active:scale-90" :aria-label="`新增${title}`" @click="open = true"><Plus :size="28" :stroke-width="2" /></button>
     </template>
   </PageHeader>
-  <p v-if="!rows.length" class="py-10 text-center text-sm text-muted">還沒有{{ title }}</p>
+  <p v-if="!rows.length" class="empty-state [--empty-top:10rem]">還沒有{{ title }}</p>
   <ul v-else ref="box" class="card divide-y divide-line p-0">
     <li v-for="(r, i) in shown" :key="r.id" :class="dragging === r.id && 'relative z-10 rounded-xl bg-surface shadow-lg'">
       <p v-if="startsGroup(shown, i)" class="px-4 pt-3 pb-1 text-xs font-semibold text-muted">{{ groupLabel(r.group ?? '') }}</p>

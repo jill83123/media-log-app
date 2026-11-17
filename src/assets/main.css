@@ -129,6 +129,11 @@ button:disabled {
     @apply rounded-2xl border border-line bg-surface p-4 transition-[box-shadow,transform,background-color] duration-200;
     box-shadow: var(--shadow);
   }
+  /* the message of an empty page: centred in what is left of the screen below the header (--empty-top = the height above it and the tab bar) */
+  .empty-state {
+    @apply grid place-items-center text-center text-sm text-muted;
+    min-height: calc(100dvh - var(--empty-top, 15rem));
+  }
   a.card,
   button.card {
     @apply active:scale-[0.985] active:bg-surface-2;

@@ -37,7 +37,7 @@ const list = computed(() => {
 
 <template>
   <div class="mb-2 px-1 text-xs text-muted">共 {{ list.length }} 筆</div>
-  <p v-if="!list.length" class="py-16 text-center text-sm text-muted">這個範圍內還沒有心得。</p>
+  <p v-if="!list.length" class="empty-state [--empty-top:19rem]">這個範圍內還沒有心得。</p>
   <ul class="space-y-3">
     <li v-for="x in list" :key="x.note.id">
       <RouterLink :to="x.series ? { path: `/series/${x.series.id}`, query: { tab: 'review' } } : { path: `/work/${x.work.id}`, query: { tab: 'review' } }" class="card flex items-center gap-3 text-left">
