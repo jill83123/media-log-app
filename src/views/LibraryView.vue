@@ -12,7 +12,12 @@ import { useSync } from '@/stores/sync'
 import { useRouter } from 'vue-router'
 import { loadDemo } from '@/lib/demo'
 import { useUi } from '@/stores/ui'
-import { GalleryVerticalEnd, ChevronDown, ChevronLeft, Cloud, Filter, LoaderCircle, LayoutGrid, List, Plus, Search } from '@/lib/uiIcons'
+import { ArrowUpDown, Check, X, GalleryVerticalEnd, ChevronDown, ChevronLeft, Cloud, Filter, LoaderCircle, LayoutGrid, List, Plus, Search } from '@/lib/uiIcons'
+import { seriesRows } from '@/lib/seriesList'
+import { createSeries, put } from '@/lib/repo'
+import PopupDialog from '@/components/PopupDialog.vue'
+import PillTabs from '@/components/PillTabs.vue'
+import SeriesList from '@/components/SeriesList.vue'
 import RatingBadge from '@/components/RatingBadge.vue'
 import BottomSheet from '@/components/BottomSheet.vue'
 import PickSheet from '@/components/PickSheet.vue'
@@ -74,6 +79,19 @@ watch(
   (v) => (f.value.types = v ? [v] : []),
 )
 const sheet = ref(false)
+/** the works, or the series of this type */
+const libTab = ref<'works' | 'series'>('works')
+/** a new series is made from its name, and opens right away to put works in */
+const newSeriesOpen = ref(false)
+const newSeriesName = ref('')
+async function addSeries() {
+  const name = newSeriesName.value.trim()
+  if (!name) return
+  const id = await createSeries(name)
+  newSeriesName.value = ''
+  newSeriesOpen.value = false
+  void router.push(`/series/${id}`)
+}
 
 /** one row per round: a work that was read twice shows up twice, each with its own status, rating and dates */
 const allRows = computed(() => {
@@ -86,12 +104,108 @@ const allRows = computed(() => {
   })
   return out.sort((a, b) => rowKey(b) - rowKey(a))
 })
+/** the filter only offers what the list (of the chosen type) really has: a year or a tag nothing uses is left out */
+const scopeWorks = computed(() => (f.value.types.length ? data.works.filter((w) => f.value.types.includes(w.type)) : data.works))
 const yearChoices = computed(() => {
-  const all = new Set<string>([thisYear])
-  for (const r of data.records) for (const y of yearsOf([r], thisYear)) all.add(y)
+  const ids = new Set(scopeWorks.value.map((w) => w.id))
+  const all = new Set<string>()
+  const dated = new Set<string>()
+  for (const r of data.records) {
+    if (!ids.has(r.workId)) continue
+    dated.add(r.workId)
+    for (const y of yearsOf([r], thisYear)) all.add(y)
+  }
+  // a work with no rounds counts as the current year
+  if (scopeWorks.value.some((w) => !dated.has(w.id))) all.add(thisYear)
+  // the year being filtered on stays, so it can still be switched off
+  if (f.value.year) all.add(f.value.year)
   return [...all].sort().reverse()
 })
-const rows = computed(() => allRows.value.filter((x) => matches(x, f.value, data.categories, yearsOf(x.record ? [x.record] : [], thisYear))))
+const tagChoices = computed(() => data.tagsByUse.filter((t) => f.value.tagIds.includes(t.id) || scopeWorks.value.some((w) => w.tagIds.includes(t.id))))
+/** what to order by, and the two ways of each (the first is 'down') */
+const WORK_SORTS = [
+  { value: 'time', label: '時間', dirs: ['新到舊', '舊到新'] },
+  { value: 'rating', label: '評分', dirs: ['高到低', '低到高'] },
+  { value: 'title', label: '標題', dirs: ['正序', '倒序'] },
+] as const
+const SERIES_SORTS = [
+  { value: 'time', label: '修改時間', dirs: ['新到舊', '舊到新'] },
+  { value: 'custom', label: '自訂順序', dirs: ['', ''] },
+  { value: 'rating', label: '評分', dirs: ['高到低', '低到高'] },
+  { value: 'name', label: '名稱', dirs: ['正序', '倒序'] },
+  { value: 'count', label: '作品數', dirs: ['多到少', '少到多'] },
+] as const
+const workDirs = computed(() => WORK_SORTS.find((o) => o.value === settings.s.librarySort)!.dirs)
+const seriesDirs = computed(() => SERIES_SORTS.find((o) => o.value === settings.s.seriesSort)!.dirs)
+/** by score: the unscored always last, whichever way */
+function byScore<T>(list: T[], score: (x: T) => number | null | undefined, down: boolean) {
+  return [...list].sort((a, b) => {
+    const ra = score(a)
+    const rb = score(b)
+    if (ra == null || rb == null) return ra == null && rb == null ? 0 : ra == null ? 1 : -1
+    return down ? rb - ra : ra - rb
+  })
+}
+const rows = computed(() => {
+  const list = allRows.value.filter((x) => matches(x, f.value, data.categories, yearsOf(x.record ? [x.record] : [], thisYear)))
+  const down = settings.s.libraryDir === 'down'
+  const s = settings.s.librarySort
+  if (s === 'title') return [...list].sort((a, b) => (down ? 1 : -1) * a.work.title.localeCompare(b.work.title, 'zh-Hant'))
+  if (s === 'rating') return byScore(list, (x) => x.record?.rating, down)
+  // the list is already newest first
+  return down ? list : [...list].reverse()
+})
+/** the series tab's own filter: a score at least, or the unscored */
+const sMinRating = ref(0)
+const sUnrated = ref(false)
+const seriesList = computed(() => {
+  const q = f.value.query.trim().toLowerCase()
+  const type = settings.s.libraryType
+  // a series with no works yet belongs to no type: it is listed under every one, so it can be found and filled
+  let list = seriesRows(data.series, data.works).filter((r) => (!type || !r.group || r.group === type) && (!q || r.name.toLowerCase().includes(q)))
+  if (sUnrated.value) list = list.filter((r) => r.rating == null)
+  else if (sMinRating.value) list = list.filter((r) => (r.rating ?? 0) >= sMinRating.value)
+  const s = settings.s.seriesSort
+  const down = settings.s.seriesDir === 'down'
+  if (s === 'name') return [...list].sort((a, b) => (down ? 1 : -1) * a.name.localeCompare(b.name, 'zh-Hant'))
+  if (s === 'count') return [...list].sort((a, b) => (down ? b.count - a.count : a.count - b.count))
+  if (s === 'time') return [...list].sort((a, b) => (down ? b.updatedAt - a.updatedAt : a.updatedAt - b.updatedAt))
+  if (s === 'rating') return byScore(list, (r) => r.rating, down)
+  return list
+})
+
+// ---- the hand-made order: press and hold a series to edit it, then 完成 saves ----
+const ordering = ref(false)
+const draftIds = ref<string[]>([])
+/** while editing: every series of this type in its own order, nothing searched or filtered away */
+const editRows = computed(() => seriesRows(data.series, data.works).filter((r) => !settings.s.libraryType || !r.group || r.group === settings.s.libraryType))
+function startOrdering() {
+  draftIds.value = editRows.value.map((r) => r.id)
+  ordering.value = true
+}
+function cancelOrdering() {
+  ordering.value = false
+}
+async function finishOrdering() {
+  const next = draftIds.value
+  ordering.value = false
+  if (next.every((id, i) => id === editRows.value[i]?.id)) return
+  // every series keeps its place in the whole order; the ones edited take the new order among the places they hold
+  const all = data.series.map((s) => s.id)
+  const slots = all.flatMap((id, i) => (next.includes(id) ? [i] : []))
+  const order = [...all]
+  next.forEach((id, k) => (order[slots[k]!] = id))
+  for (const [i, id] of order.entries()) {
+    const s = data.series.find((x) => x.id === id)
+    // the rows are reactive proxies, which IndexedDB cannot store: copy them into plain data first
+    if (s && s.order !== i) await put('series', { ...(JSON.parse(JSON.stringify(s)) as typeof s), order: i })
+  }
+  // show the order that was just made
+  settings.s.seriesSort = 'custom'
+}
+// the list being edited is of one type: leaving that type, or the tab, ends the editing
+watch([() => settings.s.libraryType, libTab], () => (ordering.value = false))
+const seriesActive = computed(() => (sMinRating.value || sUnrated.value ? 1 : 0))
 /** the number on the filter button: the type is what the list is of, not a filter, so it is not counted */
 /** a tag's page lists each work once, whatever its rounds, with its best rating */
 const tagWorks = computed(() => {
@@ -113,6 +227,8 @@ const view = computed(() => (settings.s.libraryView in NEXT ? (settings.s.librar
 /** the timeline: newest first, grouped by the month the round ended (or started); rounds with no date go last */
 /** 2026/11 → 2026 年 11 月 */
 const monthTitle = (m: string) => m.replace(/^(\d{4})\/(\d{1,2})$/, (_, y, mo) => `${y} 年 ${Number(mo)} 月`)
+/** the one group of a list that is not grouped by month */
+const FLAT = '__flat'
 const timeline = computed(() => {
   const keyOf = (r?: Rec) => {
     const d = r?.end || r?.start || ''
@@ -120,7 +236,9 @@ const timeline = computed(() => {
   }
   const dated = rows.value
     .map((x) => ({ ...x, key: keyOf(x.record) }))
-    .sort((a, b) => (a.key === b.key ? 0 : !a.key ? 1 : !b.key ? -1 : a.key < b.key ? 1 : -1))
+    .sort((a, b) => (a.key === b.key ? 0 : !a.key ? 1 : !b.key ? -1 : (a.key < b.key ? 1 : -1) * (settings.s.libraryDir === 'down' ? 1 : -1)))
+  // a score or title order is one plain list, not months
+  if (settings.s.librarySort !== 'time') return [{ month: FLAT, items: rows.value.map((x) => ({ ...x, key: '' })) }]
   const out: { month: string; items: typeof dated }[] = []
   for (const x of dated) {
     const g = out[out.length - 1]
@@ -157,6 +275,13 @@ const ratingSteps = computed(() => [0, ...mergeRatings(settings.s.ratings).map((
 
 <template>
   <header class="sticky-header">
+    <!-- editing the order: the header itself becomes cancel / save -->
+    <template v-if="ordering">
+      <button class="absolute left-4 inline-flex size-10 items-center justify-center text-ink transition active:scale-90" aria-label="取消" title="取消" @click="cancelOrdering"><X :size="24" /></button>
+      <h1 class="text-base font-bold">調整順序</h1>
+      <button class="absolute right-4 inline-flex size-10 items-center justify-center text-ink transition active:scale-90" aria-label="完成" title="完成" @click="finishOrdering"><Check :size="24" /></button>
+    </template>
+    <template v-else>
     <button v-if="route.query.tag" class="absolute left-4 inline-flex size-10 items-center justify-center text-muted transition active:scale-90" aria-label="返回" @click="router.back()"><ChevronLeft :size="24" /></button>
     <button v-else class="absolute left-4 inline-flex size-10 items-center justify-center text-muted transition active:scale-90" :aria-label="syncInfo.text" :title="syncInfo.text" @click="syncTap">
       <LoaderCircle v-if="sync.status === 'syncing'" :size="22" class="animate-spin" />
@@ -165,25 +290,36 @@ const ratingSteps = computed(() => [0, ...mergeRatings(settings.s.ratings).map((
     </button>
     <h1 v-if="tagName" class="max-w-[60%] truncate text-xl font-bold">{{ tagName }}</h1>
     <button v-else class="relative text-xl font-bold" aria-label="選擇作品類型" @click="typeOpen = true">{{ typeTitle }}<ChevronDown :size="18" class="absolute top-1/2 left-full ml-1 -translate-y-1/2 text-muted" /></button>
-    <RouterLink to="/work/new" class="absolute right-4 inline-flex size-10 items-center justify-center text-ink transition active:scale-90" aria-label="新增作品" title="新增作品"><Plus :size="24" /></RouterLink>
+    <!-- on the series tab the plus makes a series -->
+    <button v-if="libTab === 'series' && !tagName" class="absolute right-4 inline-flex size-10 items-center justify-center text-ink transition active:scale-90" aria-label="新增系列" title="新增系列" @click="newSeriesOpen = true"><Plus :size="24" /></button>
+    <RouterLink v-else to="/work/new" class="absolute right-4 inline-flex size-10 items-center justify-center text-ink transition active:scale-90" aria-label="新增作品" title="新增作品"><Plus :size="24" /></RouterLink>
     <PickSheet v-model:open="typeOpen" :model-value="typeValue" title="作品類型" :items="typeItems" @pick="pickType" />
+    </template>
   </header>
 
-  <div class="mb-4 flex gap-2">
+  <!-- while the order is edited the tabs and the search give way to the list -->
+  <PillTabs v-if="!tagName && !ordering" v-model="libTab" size="sm" class="mb-4" :options="[{ value: 'works', label: '作品' }, { value: 'series', label: '系列' }]" />
+  <div v-if="!ordering" class="mb-4 flex gap-2">
     <label class="input flex min-w-0 items-center gap-2">
       <Search :size="18" class="shrink-0 text-muted" />
       <input v-model="f.query" class="min-w-0 flex-1 bg-transparent outline-none" placeholder="搜尋標題、作者" />
     </label>
-    <button v-if="!tagName" class="icon-btn size-12 shrink-0 rounded-2xl" :aria-label="NEXT_LABEL[view]" @click="settings.s.libraryView = NEXT[view]">
+    <button v-if="!tagName && libTab === 'works'" class="icon-btn size-12 shrink-0 rounded-2xl" :aria-label="NEXT_LABEL[view]" @click="settings.s.libraryView = NEXT[view]">
       <LayoutGrid v-if="view === 'timeline'" :size="18" />
       <List v-else :size="18" />
     </button>
-    <button v-if="!tagName" class="icon-btn relative size-12 shrink-0 rounded-2xl" aria-label="篩選" @click="sheet = true">
+    <button v-if="!tagName && libTab === 'series'" class="icon-btn size-12 shrink-0 rounded-2xl" :aria-label="settings.s.seriesListView === 'grid' ? '改為列表' : '改為只顯示封面'" @click="settings.s.seriesListView = settings.s.seriesListView === 'grid' ? 'list' : 'grid'">
+      <List v-if="settings.s.seriesListView === 'grid'" :size="18" />
+      <LayoutGrid v-else :size="18" />
+    </button>
+    <button v-if="!tagName" class="icon-btn relative size-12 shrink-0 rounded-2xl" aria-label="排序與篩選" @click="sheet = true">
       <Filter :size="18" />
-      <span v-if="active" class="absolute -top-1 -right-1 grid size-5 place-items-center rounded-full bg-primary text-xs font-bold text-white">{{ active }}</span>
+      <span v-if="libTab === 'series' ? seriesActive : active" class="absolute -top-1 -right-1 grid size-5 place-items-center rounded-full bg-primary text-xs font-bold text-white">{{ libTab === 'series' ? seriesActive : active }}</span>
     </button>
   </div>
 
+  <SeriesList v-if="libTab === 'series' && !tagName" :rows="ordering ? editRows : seriesList" :searching="!!f.query.trim()" :editing="ordering" @edit="startOrdering" @order="draftIds = $event" />
+  <template v-else>
   <div v-if="data.ready && !data.works.length" class="flex min-h-[55dvh] flex-col items-center justify-center gap-5 px-6 pt-10 text-center">
     <span class="grid size-14 place-items-center rounded-full bg-surface-2 text-muted"><GalleryVerticalEnd :size="26" /></span>
     <div>
@@ -214,7 +350,7 @@ const ratingSteps = computed(() => [0, ...mergeRatings(settings.s.ratings).map((
   <!-- timeline: grouped by month, each card says on which day; rounds in progress show their progress bar -->
   <template v-else-if="view === 'timeline'">
     <div v-for="g in timeline" :key="g.month" class="mb-5">
-      <h2 class="section-title">{{ g.month ? monthTitle(g.month) : '未填日期' }}</h2>
+      <h2 v-if="g.month !== FLAT" class="section-title">{{ g.month ? monthTitle(g.month) : '未填日期' }}</h2>
       <ul class="space-y-2.5">
         <li v-for="{ work, record, rounds } in g.items" :key="work.id + (record?.id ?? '')">
           <RouterLink :to="`/work/${work.id}`" class="card flex h-[72px] items-center gap-3 overflow-hidden px-3">
@@ -260,26 +396,67 @@ const ratingSteps = computed(() => [0, ...mergeRatings(settings.s.ratings).map((
     </li>
   </ul>
 
-  <BottomSheet v-model="sheet" title="篩選">
-    <div class="space-y-5">
+  </template>
+
+  <PopupDialog v-model="newSeriesOpen">
+    <form class="card w-full max-w-[21rem] space-y-4 p-5 shadow-xl" role="dialog" aria-label="新增系列" @submit.prevent="addSeries">
+      <h2 class="text-lg leading-snug font-bold">新增系列</h2>
+      <input v-model="newSeriesName" class="input" placeholder="系列名稱" />
+      <button type="submit" class="btn btn-primary w-full disabled:opacity-40" :disabled="!newSeriesName.trim()">新增</button>
+    </form>
+  </PopupDialog>
+
+  <BottomSheet v-model="sheet" title="排序與篩選">
+    <!-- the series tab: its order, and a score to filter by -->
+    <div v-if="libTab === 'series' && !tagName" class="space-y-5">
+      <div>
+        <div class="flex items-center justify-between">
+          <span class="label">排序</span>
+          <!-- the way it goes: one tap turns it around -->
+          <button v-if="seriesDirs[0]" class="mb-1.5 flex items-center gap-1 text-xs font-semibold text-primary" @click="settings.s.seriesDir = settings.s.seriesDir === 'down' ? 'up' : 'down'"><ArrowUpDown :size="13" />{{ seriesDirs[settings.s.seriesDir === 'down' ? 0 : 1] }}</button>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button v-for="o in SERIES_SORTS" :key="o.value" class="chip" :class="settings.s.seriesSort === o.value && 'chip-on'" @click="settings.s.seriesSort = o.value">{{ o.label }}</button>
+        </div>
+      </div>
+      <div>
+        <span class="label">評分至少</span>
+        <div class="flex flex-wrap gap-2">
+          <template v-for="r in ratingSteps" :key="r">
+            <button class="chip" :class="!sUnrated && sMinRating === r && 'chip-on'" @click="((sMinRating = r), (sUnrated = false))">{{ r ? formatScore(r) : '不限' }}</button>
+            <button v-if="!r" class="chip" :class="sUnrated && 'chip-on'" @click="((sUnrated = true), (sMinRating = 0))">未評分</button>
+          </template>
+        </div>
+      </div>
+    </div>
+    <div v-else class="space-y-5">
+      <div v-if="!tagName">
+        <div class="flex items-center justify-between">
+          <span class="label">排序</span>
+          <button class="mb-1.5 flex items-center gap-1 text-xs font-semibold text-primary" @click="settings.s.libraryDir = settings.s.libraryDir === 'down' ? 'up' : 'down'"><ArrowUpDown :size="13" />{{ workDirs[settings.s.libraryDir === 'down' ? 0 : 1] }}</button>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button v-for="o in WORK_SORTS" :key="o.value" class="chip" :class="settings.s.librarySort === o.value && 'chip-on'" @click="settings.s.librarySort = o.value">{{ o.label }}</button>
+        </div>
+      </div>
       <div>
         <span class="label">年份</span>
         <div class="flex flex-wrap gap-2">
-          <button class="chip" :class="!f.year && 'chip-on'" @click="f.year = ''">全部年份</button>
+          <button class="chip" :class="!f.year && 'chip-on'" @click="f.year = ''">全部</button>
           <button v-for="y in yearChoices" :key="y" class="chip" :class="f.year === y && 'chip-on'" @click="f.year = y">{{ y }}</button>
         </div>
       </div>
       <div>
         <span class="label">狀態</span>
         <div class="flex flex-wrap gap-2">
-          <button class="chip" :class="!f.statuses.length && 'chip-on'" @click="f.statuses = []">全部狀態</button>
+          <button class="chip" :class="!f.statuses.length && 'chip-on'" @click="f.statuses = []">全部</button>
           <button v-for="s in STATUSES" :key="s.value" class="chip" :class="f.statuses.includes(s.value) && 'chip-on'" @click="toggle(f.statuses, s.value)">{{ s.label }}</button>
         </div>
       </div>
-      <div v-if="data.tags.length && !tagName">
+      <div v-if="tagChoices.length && !tagName">
         <span class="label">標籤（需全部符合）</span>
         <div class="flex flex-wrap gap-2">
-          <button v-for="t in data.tags" :key="t.id" class="chip" :class="f.tagIds.includes(t.id) && 'chip-on'" @click="toggle(f.tagIds, t.id)">{{ t.name }}</button>
+          <button v-for="t in tagChoices" :key="t.id" class="chip" :class="f.tagIds.includes(t.id) && 'chip-on'" @click="toggle(f.tagIds, t.id)">{{ t.name }}</button>
         </div>
       </div>
       <div>
@@ -294,8 +471,8 @@ const ratingSteps = computed(() => [0, ...mergeRatings(settings.s.ratings).map((
     </div>
     <template #footer>
       <div class="grid grid-cols-[auto_1fr] gap-2">
-        <button class="btn btn-ghost" @click="f = { ...emptyFilter(), types: f.types, query: f.query }">清除</button>
-        <button class="btn btn-primary" @click="sheet = false">顯示 {{ rows.length }} 筆</button>
+        <button class="btn btn-ghost" @click="libTab === 'series' && !tagName ? ((sMinRating = 0), (sUnrated = false)) : (f = { ...emptyFilter(), types: f.types, query: f.query })">清除</button>
+        <button class="btn btn-primary" @click="sheet = false">顯示 {{ libTab === 'series' && !tagName ? seriesList.length : rows.length }} 筆</button>
       </div>
     </template>
   </BottomSheet>

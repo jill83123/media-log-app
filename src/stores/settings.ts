@@ -39,6 +39,14 @@ export interface LocalSettings {
   libraryView: 'grid' | 'timeline'
   /** how a series page lays its works out */
   seriesView: 'list' | 'grid'
+  /** how the list of all series (in the settings) is shown */
+  seriesListView: 'list' | 'grid'
+  /** what the works page orders its works by, and which way ('down' = newest, best, first in the alphabet) */
+  librarySort: 'time' | 'rating' | 'title'
+  libraryDir: 'down' | 'up'
+  /** what the series tab orders the series by: the order set by hand, or by score / name / number of works; and which way */
+  seriesSort: 'time' | 'custom' | 'rating' | 'name' | 'count'
+  seriesDir: 'down' | 'up'
   /** the kind of work the works page was last showing; '' = all */
   libraryType: WorkType | ''
 }
@@ -62,6 +70,11 @@ const defaults: LocalSettings = {
   pushGroup: '',
   libraryView: 'timeline',
   seriesView: 'list',
+  seriesListView: 'list',
+  librarySort: 'time',
+  libraryDir: 'down',
+  seriesSort: 'time',
+  seriesDir: 'down',
   // the list starts on one type (the first built-in one) rather than everything mixed; 全部作品 is one tap away
   libraryType: 'anime',
 }
@@ -71,6 +84,14 @@ function read(): LocalSettings {
     const saved = JSON.parse(localStorage.getItem(KEY) ?? '{}')
     // the default colour used to be blue and could not be told from a pick: once, everyone starts on brown again
     if (saved.themeV !== 2) Object.assign(saved, { themeColor: 'brown', themeV: 2 })
+    // the orders were once one pick each ('recent', 'ratingDesc'…): anything that is no longer one starts from the default
+    if (!['time', 'rating', 'title'].includes(saved.librarySort)) delete saved.librarySort
+    if (!['time', 'custom', 'rating', 'name', 'count'].includes(saved.seriesSort)) delete saved.seriesSort
+    // the series list now starts on the time it was changed: once, an earlier default of the hand-made order is dropped
+    if (saved.seriesSortV !== 2) {
+      delete saved.seriesSort
+      saved.seriesSortV = 2
+    }
     return { ...defaults, ...saved } as LocalSettings
   } catch {
     return { ...defaults }

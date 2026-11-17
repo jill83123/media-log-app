@@ -2,6 +2,7 @@ import { defineComponent, h, type Component } from 'vue'
 import {
   ArrowDown as LArrowDown,
   ArrowUp as LArrowUp,
+  ArrowUpDown as LArrowUpDown,
   Bell as LBell,
   BookOpen as LBookOpen,
   CalendarDays as LCalendarDays,
@@ -62,6 +63,7 @@ const light = (icon: Component, name: string) =>
 
 export const GripVertical = light(LGripVertical, 'GripVertical')
 export const ArrowDown = light(LArrowDown, 'ArrowDown')
+export const ArrowUpDown = light(LArrowUpDown, 'ArrowUpDown')
 export const ArrowUp = light(LArrowUp, 'ArrowUp')
 export const Bell = light(LBell, 'Bell')
 export const BookOpen = light(LBookOpen, 'BookOpen')
