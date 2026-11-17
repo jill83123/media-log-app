@@ -131,6 +131,8 @@ async function nudge(n: number) {
   if (next !== r.progress.current) await changeProgress(r, next)
 }
 /** older rounds show how far they got, unless they were finished */
+/** the dates line has something to say (a finished or dropped round with no dates has not) */
+const showsDates = (r: Rec) => !!r.start || !!r.end || r.status === 'doing' || r.status === 'todo'
 const showsProgress = (r: { id: string; status: string }) => r.id !== latest_.value?.id && r.status !== 'done'
 const progressOpen = ref(false)
 const drawerValue = ref(0)
@@ -341,9 +343,10 @@ async function removeDay() {
                   <StatusPill :status="r.status" />
                   <RatingBadge v-if="r.rating != null" :value="r.rating" class="ml-auto shrink-0" />
                 </span>
-                <span class="mt-2 flex items-baseline justify-between gap-3 text-xs text-muted">
-                  <span>{{ formatFuzzy(r.start, '未填開始') }} → {{ formatFuzzy(r.end, '進行中') }}<template v-if="r.end && formatSpan(r.start, r.end)">（{{ formatSpan(r.start, r.end) }}）</template></span>
-                  <span v-if="showsProgress(r)" class="shrink-0 font-semibold">{{ progressText(r.progress) }}</span>
+                <span v-if="showsDates(r) || showsProgress(r)" class="mt-2 flex items-baseline justify-between gap-3 text-xs text-muted">
+                  <span v-if="!r.start && !r.end && r.status === 'todo'">尚未開始</span>
+                  <span v-else-if="showsDates(r)">{{ formatFuzzy(r.start, '未填開始') }} → {{ formatFuzzy(r.end, r.status === 'doing' ? '進行中' : '未填結束') }}<template v-if="r.end && formatSpan(r.start, r.end)">（{{ formatSpan(r.start, r.end) }}）</template></span>
+                  <span v-if="showsProgress(r)" class="ml-auto shrink-0 font-semibold">{{ progressText(r.progress) }}</span>
                 </span>
               </span>
             </button>
