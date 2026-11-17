@@ -78,7 +78,7 @@ UI 變更用 preview（`.claude/launch.json` 的 `dev`）驗證；`#/dev` 是元
 - 元件內 `<style scoped>` 只在極少數需要（現僅 `TimePickerSheet`、`SourcesPage`），其餘用 utility。
 
 ## 建置與部署
-`vite.config.ts`（PWA、`@` 別名＝`src/`、`__APP_VERSION__`）· `.github/workflows/deploy.yml`（main → 測試、建置、GitHub Pages；`worker/**` 變動不觸發）· `vitest.config.ts` + `src/__tests__/setup.ts`（fake-indexeddb）。
+`vite.config.ts`（PWA、`@` 別名＝`src/`、`__APP_VERSION__`）· `.github/workflows/deploy.yml`（main → 測試、建置、GitHub Pages；只改 `worker/`、文件（`*.md`、`docs/`）、`.claude/`、編輯器、prettier、lint 設定時不觸發（測試檔照常觸發，因為 CI 會跑測試）；新增不影響網站的檔案類型時要加進 `paths-ignore`）· `vitest.config.ts` + `src/__tests__/setup.ts`（fake-indexeddb）。
 
 ## 慣例
 - 程式註解與使用者介面為繁中文案／英文註解並存；沿用現有風格，prettier（`npm run format`）。
