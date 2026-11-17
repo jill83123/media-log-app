@@ -384,13 +384,13 @@ async function removeDay() {
                   <span>{{ x.note.kind === 'note' ? '筆記' : '心得' }}</span>
                 </span>
               </span>
-              <span class="mt-1.5 block font-medium">
+              <span v-if="x.kind !== 'note' || x.note.title" class="mt-1.5 block font-medium">
                 <template v-if="x.kind === 'start'"><span class="relative -top-px mr-2 inline-block h-4 w-[3px] rounded-full bg-primary align-middle" />開始</template>
                 <template v-else-if="x.kind === 'end'"><span class="relative -top-px mr-2 inline-block h-4 w-[3px] rounded-full bg-primary align-middle" />完成<span v-if="formatSpan(x.round.start, x.round.end)" class="font-normal text-muted">（{{ formatSpan(x.round.start, x.round.end) }}）</span></template>
                 <template v-else-if="x.kind === 'day'">{{ progressLogText(x.log, x.round.progress.unit) }}</template>
-                <template v-else-if="x.kind === 'note'"><span v-if="x.note.title">{{ x.note.title }}</span><span v-else class="font-normal text-muted">無標題</span></template>
+                <template v-else-if="x.kind === 'note'">{{ x.note.title }}</template>
               </span>
-              <span v-if="x.kind === 'note' && x.note.body" class="block whitespace-pre-wrap" :class="[x.note.title ? 'mt-0.5' : 'mt-1', 'text-sm leading-[1.45]', !openBodies[x.key] && 'line-clamp-5']" @click="tapBody($event, x.key)">{{ x.note.body }}</span>
+              <span v-if="x.kind === 'note' && x.note.body" class="block whitespace-pre-wrap" :class="[x.note.title ? 'mt-0.5' : 'mt-2', 'text-sm leading-[1.45]', !openBodies[x.key] && 'line-clamp-5']" @click="tapBody($event, x.key)">{{ x.note.body }}</span>
             </button>
           </li>
         </ul>
@@ -416,8 +416,8 @@ async function removeDay() {
               <span>{{ formatFuzzy(n.note.date) }}</span>
               <span v-if="n.note.progress != null" class="ml-auto">{{ noteProgress(n.note) }}</span>
             </div>
-            <p class="mt-1.5 font-medium" :class="!n.note.title && 'font-normal text-muted'">{{ n.note.title || '無標題' }}</p>
-            <p class="text-sm leading-[1.45] whitespace-pre-wrap" :class="[n.note.title ? 'mt-0.5' : 'mt-1', !openBodies[n.note.id] && 'line-clamp-5']" @click="tapBody($event, n.note.id)">{{ n.note.body }}</p>
+            <p v-if="n.note.title" class="mt-1.5 font-medium">{{ n.note.title }}</p>
+            <p class="text-sm leading-[1.45] whitespace-pre-wrap" :class="[n.note.title ? 'mt-0.5' : 'mt-2', !openBodies[n.note.id] && 'line-clamp-5']" @click="tapBody($event, n.note.id)">{{ n.note.body }}</p>
           </button>
         </li>
       </ul>
