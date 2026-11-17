@@ -350,7 +350,7 @@ async function removeDay() {
             <!-- progress sits inside the round it belongs to: - / + change it right away, tapping the number types one in -->
             <div v-if="r.id === latest_?.id" class="-mb-1.5 flex items-center gap-3">
               <button class="shrink-0 text-sm font-semibold" @click="progressOpen = true">{{ progressText(r.progress) }}</button>
-              <button class="flex min-w-0 flex-1 items-center self-stretch py-2.5" aria-label="輸入進度" @click="progressOpen = true"><span class="h-1.5 w-full overflow-hidden rounded-full bg-line"><span class="block h-full bg-primary" :style="{ width: `${progressRatio(r.progress) * 100}%` }" /></span></button>
+              <button class="flex min-w-0 flex-1 items-center self-stretch py-2.5" aria-label="輸入進度" @click="progressOpen = true"><span v-if="!r.progress.infinite" class="h-1.5 w-full overflow-hidden rounded-full bg-line"><span class="block h-full bg-primary" :style="{ width: `${progressRatio(r.progress) * 100}%` }" /></span></button>
               <button class="icon-btn size-9 border-0 disabled:opacity-30" :disabled="r.progress.current <= 0" aria-label="減一" @click="nudge(-1)"><Minus :size="16" /></button>
               <button class="icon-btn size-9 border-0 disabled:opacity-30" :disabled="r.progress.current >= topOf(r.progress)" aria-label="加一" @click="nudge(1)"><Plus :size="16" /></button>
             </div>
