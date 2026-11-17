@@ -28,6 +28,12 @@ const settings = useSettings()
 /** list ⇄ covers only; the button shows the layout it switches to */
 const view = computed(() => (settings.s.seriesView === 'grid' ? 'grid' : 'list'))
 const series = computed(() => data.series.find((s) => s.id === route.params.id))
+/** a work's score, as on its own page: the newest round that has one (a rewatch in progress keeps the earlier score) */
+const scoreOf = computed(() => {
+  const m = new Map<string, number>()
+  for (const r of [...data.records].sort((a, b) => a.round - b.round)) if (!r.deleted && r.rating != null) m.set(r.workId, r.rating)
+  return m
+})
 const items = computed(() =>
   data.works
     .filter((w) => w.seriesId === series.value?.id)
@@ -318,7 +324,7 @@ async function del() {
         <p class="min-w-0 flex-1 truncate text-sm font-medium">{{ work.title }}</p>
         <div class="flex shrink-0 flex-col items-end gap-1 text-xs">
           <StatusPill v-if="record" :status="record.status" />
-          <RatingBadge v-if="record?.rating != null" :value="record.rating" class="leading-none" />
+          <RatingBadge v-if="scoreOf.has(work.id)" :value="scoreOf.get(work.id)!" class="leading-none" />
         </div>
       </RouterLink>
       <RouterLink v-else :to="`/work/${work.id}`" draggable="false" class="block transition-[scale] duration-200">
