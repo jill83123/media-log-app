@@ -57,6 +57,12 @@ function setStatus(s: Rec['status']) {
   if (s === 'done' && !draft.value.progress.infinite && draft.value.progress.total) draft.value.progress.current = draft.value.progress.total
 }
 
+/** filling in an end date on a round still going finishes it: 看完, progress full */
+function setEnd(v: string) {
+  draft.value.end = v
+  if (v && (draft.value.status === 'todo' || draft.value.status === 'doing')) setStatus('done')
+}
+
 async function save() {
   // the draft is a reactive proxy, which IndexedDB can't clone: save a plain copy
   await put('records', JSON.parse(JSON.stringify(draft.value)))
@@ -106,7 +112,7 @@ async function save() {
 
       <div class="space-y-4">
         <FuzzyDateField v-model="draft.start" label="開始" />
-        <FuzzyDateField v-model="draft.end" label="結束" />
+        <FuzzyDateField :model-value="draft.end" label="結束" @update:model-value="setEnd" />
       </div>
 
       <div class="flex gap-3 pt-1">
