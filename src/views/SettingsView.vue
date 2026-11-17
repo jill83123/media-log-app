@@ -22,7 +22,6 @@ const groups = computed(() => [
     title: '資料',
     items: [
       { to: '/manage/tags', label: '標籤', hint: `${data.tags.length} 個` },
-      { to: '/manage/series', label: '系列', hint: `${data.series.length} 個` },
       { to: '/settings/types', label: '作品類型', hint: `${workTypes().length} 個` },
       { to: '/settings/ratings', label: '評分等級', hint: `${mergeRatings(settings.s.ratings).length} 級` },
     ],

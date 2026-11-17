@@ -36,7 +36,7 @@ export default createRouter({
     { path: '/work/:id', component: () => import('@/views/WorkView.vue') },
     { path: '/work/:id/edit', component: () => import('@/views/WorkEditView.vue') },
     { path: '/series/:id', component: () => import('@/views/SeriesView.vue') },
-    { path: '/manage/:kind(tags|series)', component: () => import('@/views/ManageView.vue') },
+    { path: '/manage/tags', component: () => import('@/views/ManageView.vue') },
     { path: '/dev', component: () => import('@/views/DevView.vue') },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],

@@ -94,7 +94,7 @@ async function coverUrl() {
   if (v) form.value.cover = v
 }
 
-const tagItems = computed(() => data.tags.map((t) => ({ id: t.id, name: t.name })))
+const tagItems = computed(() => data.tagsByUse.map((t) => ({ id: t.id, name: t.name })))
 const seriesItems = computed(() => data.series.map((s) => ({ id: s.id, name: s.name })))
 const seriesModel = computed({ get: () => (form.value.seriesId ? [form.value.seriesId] : []), set: (v) => (form.value.seriesId = v[0]) })
 const seriesName = computed(() => data.series.find((s) => s.id === form.value.seriesId)?.name)

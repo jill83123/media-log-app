@@ -50,6 +50,15 @@ export const useData = defineStore('data', () => {
 
   const workById = computed(() => new Map(works.value.map((w) => [w.id, w])))
 
+  /** how many works carry each tag */
+  const tagUse = computed(() => {
+    const m = new Map<string, number>()
+    for (const w of works.value) for (const id of w.tagIds) m.set(id, (m.get(id) ?? 0) + 1)
+    return m
+  })
+  /** the tags, most used first (ties by name): the order every tag list shows */
+  const tagsByUse = computed(() => [...tags.value].sort((a, b) => (tagUse.value.get(b.id) ?? 0) - (tagUse.value.get(a.id) ?? 0) || a.name.localeCompare(b.name)))
+
   /** the record that shows on the work's card: the newest round */
   const latestRecord = computed(() => {
     const m = new Map<string, Rec>()
@@ -70,5 +79,5 @@ export const useData = defineStore('data', () => {
       }),
   )
 
-  return { ready, start, works, series, records, notes, progressLogs, tags, categories, workById, latestRecord, library }
+  return { ready, start, works, series, records, notes, progressLogs, tags, categories, workById, tagUse, tagsByUse, latestRecord, library }
 })
