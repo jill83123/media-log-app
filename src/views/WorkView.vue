@@ -4,7 +4,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import type { Progress, ProgressLog, Rec, WorkNote } from '@/db/types'
 import { earliest, formatFuzzy, formatSpan, latest, today } from '@/lib/date'
 import { uid } from '@/lib/id'
-import { progressLogText, progressRatio, progressText, typeLabel } from '@/lib/meta'
+import { fromToStart, progressLogParts, progressRatio, progressText, startToFrom, typeLabel } from '@/lib/meta'
 import { formatRating } from '@/lib/ratings'
 import { useCover } from '@/lib/covers'
 import { logProgress, progressLogId, put, remove, removeRecord, setProgress, startNewRound } from '@/lib/repo'
@@ -234,7 +234,7 @@ function editDay(r: Rec, l: ProgressLog) {
   dayLogId.value = l.id
   dayDate.value = l.date
   dayValue.value = l.value
-  dayFrom.value = l.from != null ? String(l.from) : ''
+  dayFrom.value = l.from != null ? String(fromToStart(l.from)) : ''
   dayOpen.value = true
 }
 const dayError = computed(() => {
@@ -252,7 +252,7 @@ async function saveDay() {
   // moving an entry to another day: the old one goes away (the new day's entry, if any, is replaced)
   if (dayLogId.value && dayLogId.value !== progressLogId(r.id, dayDate.value)) await remove('progressLogs', dayLogId.value)
   const old = dayLogId.value ? data.progressLogs.find((l) => l.id === dayLogId.value) : undefined
-  await logProgress(r, dayValue.value, dayDate.value, dayFrom.value === '' ? undefined : Number(dayFrom.value))
+  await logProgress(r, dayValue.value, dayDate.value, dayFrom.value === '' ? undefined : startToFrom(Number(dayFrom.value)))
   // the next day continued from where this one ended: keep it connected
   if (old && old.value !== dayValue.value) {
     const next = data.progressLogs.filter((l) => l.recordId === r.id && l.date > dayDate.value).sort((a, b) => a.date.localeCompare(b.date))[0]
@@ -387,7 +387,7 @@ async function removeDay() {
               <span v-if="x.kind !== 'note' || x.note.title" class="mt-1.5 block font-medium">
                 <template v-if="x.kind === 'start'"><span class="relative -top-px mr-2 inline-block h-4 w-[3px] rounded-full bg-primary align-middle" />開始</template>
                 <template v-else-if="x.kind === 'end'"><span class="relative -top-px mr-2 inline-block h-4 w-[3px] rounded-full bg-primary align-middle" />完成<span v-if="formatSpan(x.round.start, x.round.end)" class="font-normal text-muted">（{{ formatSpan(x.round.start, x.round.end) }}）</span></template>
-                <template v-else-if="x.kind === 'day'">{{ progressLogText(x.log, x.round.progress.unit) }}</template>
+                <template v-else-if="x.kind === 'day'">{{ progressLogParts(x.log, x.round.progress.unit).text }}<span class="font-normal text-muted">{{ progressLogParts(x.log, x.round.progress.unit).diff }}</span></template>
                 <template v-else-if="x.kind === 'note'">{{ x.note.title }}</template>
               </span>
               <span v-if="x.kind === 'note' && x.note.body" class="block whitespace-pre-wrap" :class="[x.note.title ? 'mt-0.5' : 'mt-2', 'text-sm leading-[1.45]', !openBodies[x.key] && 'line-clamp-5']" @click="tapBody($event, x.key)">{{ x.note.body }}</span>

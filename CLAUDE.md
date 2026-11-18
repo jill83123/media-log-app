@@ -27,7 +27,7 @@ UI 變更用 preview（`.claude/launch.json` 的 `dev`）驗證；`#/dev` 是元
 ## 邏輯 `src/lib/`（純函式優先，`*.test.ts` 同名）
 寫入資料一律走 **`repo.ts`**，不要在畫面直接 `db.xxx.put`。
 - `repo.ts`：`createWork/createRecord/startNewRound/setProgress/logProgress/logChange/setStatus/removeRecord/removeWork`、`createTag/Series/Category`、`removeTag/Series/Category`、`put/remove`（通用）、`migrateCategoriesToTags`。
-- `meta.ts`：作品類型（`DEFAULT_TYPES`、`allTypes/workTypes`、`typeLabel/typeUnit`）、狀態（`STATUSES`、`statusLabel`）、進度文字（`progressText/progressRatio`）。
+- `meta.ts`：作品類型（`DEFAULT_TYPES`、`allTypes/workTypes`、`typeLabel/typeUnit`）、狀態（`STATUSES`、`statusLabel`）、進度文字（`progressText/progressRatio`、每日進度 `progressLogParts`；`fromToStart/startToFrom` 換算起點）。
 - `ratings.ts`：評分等級（檔位 0.5–5 ↔ 顯示分數；`scoreOf/starsOf/formatScore/formatRating`）。
 - `date.ts`：模糊日期運算與格式（`precision/within/earliest/latest/daysSpan/formatFuzzy/monthGrid…`）。
 - `filter.ts`：作品庫篩選（`LibraryFilter`、`matches`、`descendants`、`yearsOf`）。

@@ -58,10 +58,26 @@ export function progressText(p: { current: number; total: number; unit: string; 
   if (p.infinite || !p.total) return pct ? `${p.current}%` : `${p.current} ${p.unit}`
   return pct ? `${p.current}%` : `${p.current} / ${p.total} ${p.unit}`
 }
-/** "進度 5～6%" when the day's start is known, "進度 4%" when only where it got to is */
+/**
+ * A day's `from` is stored as where the round stood BEFORE the day (the previous day's end, so days chain), but it is shown
+ * and edited as the first step of that day: stored 14 → shown 15. Only the display/edit layer converts; stored data is untouched.
+ */
+export const fromToStart = (from: number) => from + 1
+export const startToFrom = (start: number) => Math.max(0, start - 1)
+/**
+ * Every unit (% included), range of that day's steps plus the gap: stored 14 → 17 → "進度 15～17 集（3 集）",
+ * 3 → 8% → "進度 4～8%（5%）", 17 → 18 → "進度 18 集（1 集）". Only where it got to is known → "進度 4%".
+ */
+export function progressLogParts(l: { value: number; from?: number }, unit: string): { text: string; diff: string } {
+  const diff = l.from != null ? l.value - l.from : 0
+  const u = unit === '%' ? '%' : ` ${unit}`
+  if (l.from == null || diff <= 0) return { text: `進度 ${l.value}${u}`, diff: '' }
+  const start = fromToStart(l.from)
+  return { text: `進度 ${start === l.value ? l.value : `${start}～${l.value}`}${u}`, diff: `（${diff}${u}）` }
+}
 export function progressLogText(l: { value: number; from?: number }, unit: string): string {
-  const range = l.from != null && l.from < l.value ? `${l.from}～` : ''
-  return unit === '%' ? `進度 ${range}${l.value}%` : `進度 ${range}${l.value} ${unit}`
+  const p = progressLogParts(l, unit)
+  return p.text + p.diff
 }
 export const progressRatio = (p: { current: number; total: number; infinite: boolean }) =>
   p.infinite || !p.total ? 0 : Math.min(1, p.current / p.total)
