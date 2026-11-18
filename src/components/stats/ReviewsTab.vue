@@ -49,7 +49,7 @@ const list = computed(() => {
           </div>
           <RatingBadge v-if="x.series ? x.series.rating != null : ratingOf.has(x.work.id)" :value="x.series ? x.series.rating! : ratingOf.get(x.work.id)!" class="mt-0.5 text-xs leading-4" />
           <div v-else class="mt-0.5 text-xs leading-4 text-muted">未評分</div>
-          <p class="mt-0.5 line-clamp-1 text-sm leading-[1.45] whitespace-pre-wrap"><template v-if="x.note.title"><span class="font-medium"><span class="-ml-[0.5em]">【</span>{{ x.note.title }}】</span></template>{{ x.note.body }}</p>
+          <p class="mt-0.5 line-clamp-1 text-sm leading-[1.45] whitespace-pre-wrap"><template v-if="x.note.title"><span><span class="-ml-[0.5em]">【</span>{{ x.note.title }}】</span></template>{{ x.note.body }}</p>
         </div>
       </RouterLink>
     </li>

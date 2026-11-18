@@ -36,7 +36,7 @@ const pickedMonth = ref('')
 const eventsOn = computed(() => (pickedMonth.value ? looseOf(pickedMonth.value) : props.events.filter((e) => e.date === picked.value)))
 /** the drawer shows each work once: everything that happened to it that day is gathered on one line */
 const RANK = { finish: 0, start: 1, progress: 2, note: 3 } as const
-const labelOf = (e: DayEvent) => (e.kind === 'start' ? '開始' : e.kind === 'finish' ? '看完' : e.kind === 'note' ? '筆記' : e.log ? progressLogText(e.log, e.record.progress.unit) : '')
+const labelOf = (e: DayEvent) => (e.kind === 'start' ? '開始' : e.kind === 'finish' ? '看完' : e.kind === 'note' ? (e.isNote ? '筆記' : '心得') : e.log ? progressLogText(e.log, e.record.progress.unit) : '')
 const rows = computed(() => {
   const m = new Map<string, { work: DayEvent['work']; labels: string[] }>()
   for (const e of [...eventsOn.value].sort((a, b) => RANK[a.kind] - RANK[b.kind])) {
@@ -123,8 +123,12 @@ watch(year, jump)
       <li v-for="r in rows" :key="r.work.id">
         <RouterLink :to="`/work/${r.work.id}`" class="flex items-center gap-3 text-sm">
           <WorkCover :src="r.work.cover" :title="r.work.title" class="h-12 w-[34px] shrink-0" />
-          <span class="min-w-0 flex-1 truncate">{{ r.work.title }}</span>
-          <span v-if="r.labels.length" class="max-w-[45%] shrink-0 text-right text-xs text-muted">{{ r.labels.join('、') }}</span>
+          <span class="min-w-0 flex-1">
+            <span class="block truncate font-medium">{{ r.work.title }}</span>
+            <span v-if="r.labels.length" class="mt-0.5 flex flex-wrap text-xs text-muted">
+              <span v-for="(l, i) in r.labels" :key="l" class="whitespace-nowrap">{{ l }}<template v-if="i < r.labels.length - 1">、</template></span>
+            </span>
+          </span>
         </RouterLink>
       </li>
     </ul>

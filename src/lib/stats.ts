@@ -145,6 +145,8 @@ export interface DayEvent {
   record: Rec
   /** for a 'progress' event: the day's entry */
   log?: ProgressLog
+  /** for a 'note' event: true for a 筆記, false for a 心得 */
+  isNote?: boolean
 }
 
 /** every dated thing that happened: starts, finishes, the days progress was logged, and notes */
@@ -164,7 +166,7 @@ export function eventsOf(items: Item[], notes: WorkNote[], logs: ProgressLog[] =
   for (const it of items) if (!newest.has(it.work.id) || it.record.round > newest.get(it.work.id)!.record.round) newest.set(it.work.id, it)
   for (const n of notes) {
     const it = newest.get(n.workId)
-    if (it && precision(n.date) === 'day') out.push({ date: n.date, kind: 'note', work: it.work, record: it.record })
+    if (it && precision(n.date) === 'day') out.push({ date: n.date, kind: 'note', work: it.work, record: it.record, isNote: n.kind === 'note' })
   }
   return out
 }
