@@ -4,7 +4,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import type { Progress, ProgressLog, Rec, WorkNote } from '@/db/types'
 import { earliest, formatFuzzy, formatSpan, latest, today } from '@/lib/date'
 import { uid } from '@/lib/id'
-import { fromToStart, progressLogParts, progressRatio, progressText, startToFrom, typeLabel } from '@/lib/meta'
+import { fromToStart, progressLogParts, progressRatio, progressText, spikeLogIds, startToFrom, typeLabel } from '@/lib/meta'
 import { formatRating } from '@/lib/ratings'
 import { useCover } from '@/lib/covers'
 import { logProgress, progressLogId, put, remove, removeRecord, setProgress, startNewRound } from '@/lib/repo'
@@ -187,6 +187,14 @@ const feed = computed<FeedItem[]>(() => {
   for (const n of workNotes.value) out.push({ key: n.id, kind: 'note', date: n.date, round: roundOfNote(n), rank: n.kind === 'note' ? 3.5 : 5, note: n })
   const day = (x: FeedItem) => latest(x.date) || ''
   return out.sort((a, b) => (day(a) === day(b) ? (b.round?.round ?? 0) - (a.round?.round ?? 0) || b.rank - a.rank : day(a) < day(b) ? 1 : -1))
+})
+/** days that went far beyond that round's usual pace, shown in red */
+const spikes = computed(() => {
+  const out = new Set<string>()
+  for (const r of rounds.value) {
+    for (const id of spikeLogIds(data.progressLogs.filter((l) => l.recordId === r.id))) out.add(id)
+  }
+  return out
 })
 /** with several rounds the list is folded into one section per round, newest first; the older ones start closed */
 const feedGroups = computed(() => {
@@ -398,7 +406,7 @@ async function removeDay() {
               <span v-if="x.kind !== 'note' || x.note.title" class="mt-1.5 block font-medium">
                 <template v-if="x.kind === 'start'"><span class="relative -top-px mr-2 inline-block h-4 w-[3px] rounded-full bg-primary align-middle" />開始</template>
                 <template v-else-if="x.kind === 'end'"><span class="relative -top-px mr-2 inline-block h-4 w-[3px] rounded-full bg-primary align-middle" />完成<span v-if="formatSpan(x.round.start, x.round.end)" class="font-normal text-muted">（{{ formatSpan(x.round.start, x.round.end) }}）</span></template>
-                <template v-else-if="x.kind === 'day'">{{ progressLogParts(x.log, x.round.progress.unit).text }}<span class="font-normal text-muted">{{ progressLogParts(x.log, x.round.progress.unit).diff }}</span></template>
+                <template v-else-if="x.kind === 'day'">{{ progressLogParts(x.log, x.round.progress.unit).text }}<span :class="spikes.has(x.log.id) ? 'font-semibold text-primary' : 'font-normal text-muted'">{{ progressLogParts(x.log, x.round.progress.unit).diff }}</span></template>
                 <template v-else-if="x.kind === 'note'">{{ x.note.title }}</template>
               </span>
               <span v-if="x.kind === 'note' && x.note.body" class="block whitespace-pre-wrap" :class="[x.note.title ? 'mt-0.5' : 'mt-2', 'text-sm leading-[1.45]', !openBodies[x.key] && 'line-clamp-5']" @click="tapBody($event, x.key)">{{ x.note.body }}</span>

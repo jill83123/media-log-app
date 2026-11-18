@@ -75,6 +75,18 @@ export function progressLogParts(l: { value: number; from?: number }, unit: stri
   const start = fromToStart(l.from)
   return { text: `進度 ${start === l.value ? l.value : `${start}～${l.value}`}${u}`, diff: `（${diff}${u}）` }
 }
+/**
+ * Days of ONE round whose gap is far above the usual (>= 2x the median of that round's gaps, needs >= 4 days of data).
+ * Only the high side is flagged; a slow day is normal.
+ */
+export function spikeLogIds(logs: { id: string; value: number; from?: number }[]): Set<string> {
+  const gaps = logs.filter((l) => l.from != null && l.value - l.from > 0).map((l) => ({ id: l.id, d: l.value - l.from! }))
+  if (gaps.length < 4) return new Set()
+  const s = gaps.map((g) => g.d).sort((a, b) => a - b)
+  const mid = s.length >> 1
+  const median = s.length % 2 ? s[mid]! : (s[mid - 1]! + s[mid]!) / 2
+  return new Set(gaps.filter((g) => g.d >= median * 2).map((g) => g.id))
+}
 export function progressLogText(l: { value: number; from?: number }, unit: string): string {
   const p = progressLogParts(l, unit)
   return p.text + p.diff
