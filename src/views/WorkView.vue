@@ -11,6 +11,7 @@ import { logProgress, progressLogId, put, remove, removeRecord, setProgress, sta
 import { useData } from '@/stores/data'
 import { useUi } from '@/stores/ui'
 import { Layers, Minus, Pencil, Plus, ChevronDown } from '@/lib/uiIcons'
+import CheckField from '@/components/CheckField.vue'
 import FuzzyDateField from '@/components/FuzzyDateField.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import PillTabs from '@/components/PillTabs.vue'
@@ -219,6 +220,8 @@ const dayDate = ref('')
 const dayValue = ref(0)
 /** '' = the start of the day is not known */
 const dayFrom = ref('')
+/** also move the next day's start along (off unless ticked) */
+const dayLink = ref(false)
 /** the entry being edited; '' when adding one for a day that has none yet */
 const dayLogId = ref('')
 function addDay(r: Rec) {
@@ -227,6 +230,7 @@ function addDay(r: Rec) {
   dayDate.value = today()
   dayValue.value = r.progress.current
   dayFrom.value = ''
+  dayLink.value = false
   dayOpen.value = true
 }
 function editDay(r: Rec, l: ProgressLog) {
@@ -235,8 +239,17 @@ function editDay(r: Rec, l: ProgressLog) {
   dayDate.value = l.date
   dayValue.value = l.value
   dayFrom.value = l.from != null ? String(fromToStart(l.from)) : ''
+  dayLink.value = false
   dayOpen.value = true
 }
+/** the next day after the entry being edited, when it has a recorded start: offered to be set to this end (also re-syncs days that drifted apart) */
+const linkedNext = computed(() => {
+  const r = dayRec.value
+  const old = dayLogId.value ? data.progressLogs.find((l) => l.id === dayLogId.value) : undefined
+  if (!r || !old) return undefined
+  const next = data.progressLogs.filter((l) => l.recordId === r.id && l.date > old.date).sort((a, b) => a.date.localeCompare(b.date))[0]
+  return next && next.from != null ? next : undefined
+})
 const dayError = computed(() => {
   const r = dayRec.value
   if (!r) return ''
@@ -253,11 +266,9 @@ async function saveDay() {
   if (dayLogId.value && dayLogId.value !== progressLogId(r.id, dayDate.value)) await remove('progressLogs', dayLogId.value)
   const old = dayLogId.value ? data.progressLogs.find((l) => l.id === dayLogId.value) : undefined
   await logProgress(r, dayValue.value, dayDate.value, dayFrom.value === '' ? undefined : startToFrom(Number(dayFrom.value)))
-  // the next day continued from where this one ended: keep it connected
-  if (old && old.value !== dayValue.value) {
-    const next = data.progressLogs.filter((l) => l.recordId === r.id && l.date > dayDate.value).sort((a, b) => a.date.localeCompare(b.date))[0]
-    if (next && next.from === old.value) await logProgress(r, next.value, next.date, Math.min(dayValue.value, next.value))
-  }
+  // the next day continued from where this one ended: only moves along when asked to
+  const next = linkedNext.value
+  if (old && next && dayLink.value) await logProgress(r, next.value, next.date, Math.min(dayValue.value, next.value))
   // the round stands where its latest day says: an entry on (or after) the newest day moves the current progress too
   const newest = data.progressLogs.every((l) => l.recordId !== r.id || l.id === progressLogId(r.id, dayDate.value) || l.date <= dayDate.value)
   if (newest && dayValue.value !== r.progress.current) {
@@ -444,7 +455,11 @@ async function removeDay() {
         <FuzzyDateField v-model="dayDate" label="日期" day-only :max="today()" />
         <label class="block">
           <span class="label">從哪開始（選填）</span>
-          <input class="input text-center" inputmode="numeric" placeholder="不確定就留空，只記看到哪" :value="dayFrom" @input="dayFrom = ($event.target as HTMLInputElement).value.replace(/\D/g, '')" />
+          <div class="relative">
+            <button type="button" class="icon-btn absolute top-1/2 left-1 -translate-y-1/2 border-0 bg-transparent disabled:opacity-30" aria-label="減一" :disabled="dayFrom === '' || Number(dayFrom) <= 0" @click="dayFrom = String(Number(dayFrom) - 1)"><Minus :size="18" /></button>
+            <input class="input w-full px-12 text-center" inputmode="numeric" placeholder="不確定就留空，只記看到哪" :value="dayFrom" @input="dayFrom = ($event.target as HTMLInputElement).value.replace(/\D/g, '')" />
+            <button type="button" class="icon-btn absolute top-1/2 right-1 -translate-y-1/2 border-0 bg-transparent" aria-label="加一" @click="dayFrom = String(Number(dayFrom) + 1)"><Plus :size="18" /></button>
+          </div>
         </label>
         <div>
           <span class="label">看到（{{ dayRec.progress.unit }}）</span>
@@ -455,6 +470,7 @@ async function removeDay() {
           </div>
           <p v-if="dayError" class="mt-1.5 text-sm text-danger">{{ dayError }}</p>
         </div>
+        <CheckField v-if="linkedNext" v-model="dayLink" class="-mt-2 px-1">連動 {{ formatFuzzy(linkedNext.date).slice(5) }} 的起點</CheckField>
         <div class="flex gap-2">
           <button v-if="dayLogId" type="button" class="btn btn-ghost shrink-0 px-3.5 text-sm text-danger" @click="removeDay">刪除</button>
           <button type="submit" class="btn btn-primary min-w-0 flex-1 disabled:opacity-40" :disabled="!!dayError">儲存</button>
