@@ -97,7 +97,9 @@ async function addSeries() {
 const allRows = computed(() => {
   const by = new Map<string, Rec[]>()
   for (const r of data.records) by.set(r.workId, [...(by.get(r.workId) ?? []), r])
-  const rowKey = (x: { work: Work; record?: Rec }) => Math.max(x.record?.updatedAt ?? 0, x.work.updatedAt, Date.parse(earliest(x.record?.end ?? '')) || 0)
+  // newest start first (falls back to the end date, then to when it was last edited, for rounds with no dates)
+  const rowKey = (x: { work: Work; record?: Rec }) =>
+    Date.parse(earliest(x.record?.start || x.record?.end || '')) || Math.max(x.record?.updatedAt ?? 0, x.work.updatedAt)
   const out = data.works.flatMap((work) => {
     const rs = (by.get(work.id) ?? []).sort((a, b) => a.round - b.round)
     return rs.length ? rs.map((record) => ({ work, record, rounds: rs.length })) : [{ work, record: undefined as Rec | undefined, rounds: 0 }]
@@ -224,14 +226,14 @@ const NEXT = { timeline: 'grid', grid: 'timeline' } as const
 const NEXT_LABEL = { timeline: '改為圖片格狀', grid: '改為時間軸' } as const
 const view = computed(() => (settings.s.libraryView in NEXT ? (settings.s.libraryView as keyof typeof NEXT) : 'timeline'))
 
-/** the timeline: newest first, grouped by the month the round ended (or started); rounds with no date go last */
+/** the timeline: newest first, grouped by the month the round started (or ended, if no start); rounds with no date go last */
 /** 2026/11 → 2026 年 11 月 */
 const monthTitle = (m: string) => m.replace(/^(\d{4})\/(\d{1,2})$/, (_, y, mo) => `${y} 年 ${Number(mo)} 月`)
 /** the one group of a list that is not grouped by month */
 const FLAT = '__flat'
 const timeline = computed(() => {
   const keyOf = (r?: Rec) => {
-    const d = r?.end || r?.start || ''
+    const d = r?.start || r?.end || ''
     return d ? (d.length <= 4 ? d : d.slice(0, 7)) : ''
   }
   const dated = rows.value
@@ -250,13 +252,14 @@ const timeline = computed(() => {
 
 /**
  * When the round was: "11/10～11/13", one day alone as "11/13", still going as "11/10～". Two digits each so the cards line up;
- * the end carries its year ("26/01/01") only when it falls in another year than the start. Dates known only to the year or month are left out.
+ * the end carries its year ("26/01/01") only when it falls in another year than the start. A month with no day shows as "11 月" (two digits, like the full dates); dates known only to the year are left out.
  */
 function spanOf(r?: Rec) {
-  const day = (d?: string) => (d && d.length === 10 ? d : '')
+  const day = (d?: string) => (d && (d.length === 10 || d.length === 7) ? d : '')
   const s = day(r?.start)
   const e = day(r?.end)
-  const md = (d: string) => `${d.slice(5, 7)}/${d.slice(8)}`
+  // a month with no day shows as "11 月" (two digits, like the full dates)
+  const md = (d: string) => (d.length === 10 ? `${d.slice(5, 7)}/${d.slice(8)}` : `${d.slice(5, 7)} 月`)
   if (s && e) return s === e ? md(s) : `${md(s)}～${e.slice(0, 4) === s.slice(0, 4) ? '' : `${e.slice(2, 4)}/`}${md(e)}`
   return s ? `${md(s)}～` : e ? md(e) : ''
 }
