@@ -3,10 +3,11 @@ import { db } from '@/db'
 /** pictures this much younger than now are left alone: another device may have uploaded one whose work has not synced yet */
 export const IMAGE_GRACE_MS = 24 * 3600 * 1000
 
-/** the Drive file ids that live works still point at */
+/** the Drive file ids that live works and series still point at */
 export async function referencedImages(): Promise<Set<string>> {
-  const works = await db.works.filter((w) => !w.deleted && !!w.cover?.startsWith('drive:')).toArray()
-  return new Set(works.map((w) => w.cover!.slice('drive:'.length)))
+  const isDrive = (r: { deleted?: boolean; cover?: string }) => !r.deleted && !!r.cover?.startsWith('drive:')
+  const rows = [...(await db.works.filter(isDrive).toArray()), ...(await db.series.filter(isDrive).toArray())]
+  return new Set(rows.map((r) => r.cover!.slice('drive:'.length)))
 }
 
 /** the files nothing points at any more (and that are old enough to be sure of it) */

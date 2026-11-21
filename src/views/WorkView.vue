@@ -40,7 +40,10 @@ watch(
   () => (roundId.value = ''),
 )
 
-const tags = computed(() => data.tags.filter((t) => work.value?.tagIds.includes(t.id)))
+const tags = computed(() => {
+  const ids = work.value ? data.tagIdsOf(work.value) : []
+  return data.tags.filter((t) => ids.includes(t.id))
+})
 const series = computed(() => data.series.find((s) => s.id === work.value?.seriesId))
 const coverUrl = useCover(() => work.value?.cover)
 

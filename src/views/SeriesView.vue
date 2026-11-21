@@ -2,9 +2,12 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useData } from '@/stores/data'
+import { useCover } from '@/lib/covers'
+import { fileToCover } from '@/lib/image'
 import { useUi } from '@/stores/ui'
 import { useSettings } from '@/stores/settings'
-import { put, removeSeries } from '@/lib/repo'
+import { createTag, put, removeSeries } from '@/lib/repo'
+import NamePickSheet from '@/components/NamePickSheet.vue'
 import { statusLabel } from '@/lib/meta'
 import { formatFuzzy, today } from '@/lib/date'
 import { uid } from '@/lib/id'
@@ -159,18 +162,68 @@ function swallowClick(e: MouseEvent) {
   e.stopPropagation()
 }
 
+/** the series' own cover, else the first work's (first with a cover) */
+const coverSrc = computed(() => series.value?.cover || items.value.find((x) => x.work.cover)?.work.cover)
+const coverUrl = useCover(() => coverSrc.value)
+
+/** series tags: every work in the series carries them too */
+const tagsOpen = ref(false)
+/** picking a tag changes how much each tag is used, which would reshuffle the list under the finger: keep the order it had when the sheet opened */
+const frozenOrder = ref<string[]>([])
+watch(tagsOpen, (o) => {
+  if (o) frozenOrder.value = data.tagsByUse.map((t) => t.id)
+})
+const tagItems = computed(() => {
+  const rank = new Map(frozenOrder.value.map((id, i) => [id, i]))
+  const list = tagsOpen.value ? [...data.tags].sort((a, b) => (rank.get(a.id) ?? 1e9) - (rank.get(b.id) ?? 1e9)) : data.tagsByUse
+  return list.map((t) => ({ id: t.id, name: t.name }))
+})
+const tagsModel = computed<string[]>({
+  get: () => series.value?.tagIds ?? [],
+  set: (v) => {
+    if (series.value) void put('series', JSON.parse(JSON.stringify({ ...series.value, tagIds: v })))
+  },
+})
+const tagNames = computed(() => tagsModel.value.map((id) => data.tags.find((t) => t.id === id)?.name).filter(Boolean) as string[])
+
 /** the pencil opens one small dialog for the name and for deleting the series */
 const editOpen = ref(false)
 const nameDraft = ref('')
+/** the picked cover (what the page shows now when the dialog opens) */
+const coverDraft = ref('')
+/** the default: the first work that has a cover */
+const defaultCover = computed(() => items.value.find((x) => x.work.cover)?.work.cover)
+/** each distinct cover among the series' works, in their order, then a picture of the user's own */
+const coverChoices = computed(() => {
+  const seen = new Set<string>()
+  const list = items.value.flatMap((x) => (x.work.cover && !seen.has(x.work.cover) ? (seen.add(x.work.cover), [{ id: x.work.id, title: x.work.title, cover: x.work.cover }]) : []))
+  if (coverDraft.value && !seen.has(coverDraft.value)) list.push({ id: 'own', title: '自選圖片', cover: coverDraft.value })
+  return list
+})
+const coverFile = ref<HTMLInputElement>()
+async function pickCover(e: Event) {
+  const el = e.target as HTMLInputElement
+  const f = el.files?.[0]
+  el.value = ''
+  if (!f) return
+  try {
+    coverDraft.value = await fileToCover(f)
+  } catch {
+    ui.toast('無法讀取這張圖片')
+  }
+}
 function edit() {
   nameDraft.value = series.value?.name ?? ''
+  coverDraft.value = coverSrc.value ?? ''
   editOpen.value = true
 }
 async function save() {
   const v = nameDraft.value.trim()
   if (!series.value || !v) return
   editOpen.value = false
-  if (v !== series.value.name) await put('series', { ...JSON.parse(JSON.stringify(series.value)), name: v })
+  // the first work's cover is the default, so it is not stored (the series keeps following it)
+  const cover = coverDraft.value && coverDraft.value !== defaultCover.value ? coverDraft.value : undefined
+  if (v !== series.value.name || cover !== (series.value.cover || undefined)) await put('series', JSON.parse(JSON.stringify({ ...series.value, name: v, cover })))
 }
 
 // ---- 心得: several, each with a date, newest first ----
@@ -243,21 +296,37 @@ async function del() {
 </script>
 
 <template>
-  <PageHeader :title="series?.name ?? ''">
-    <template #right>
-      <button v-if="tab === 'works'" class="circle-btn" :aria-label="view === 'list' ? '改為只顯示封面' : '改為列表'" @click="settings.s.seriesView = view === 'list' ? 'grid' : 'list'">
-        <LayoutGrid v-if="view === 'list'" :size="19" />
-        <List v-else :size="19" />
-      </button>
-      <button v-if="tab === 'review'" class="circle-btn" aria-label="寫心得" @click="newReview"><Plus :size="19" /></button>
-      <button class="circle-btn" aria-label="編輯系列" @click="edit"><Pencil :size="19" /></button>
-    </template>
-    <!-- the score sits under the name, inside the header, so the icons stay centred on both -->
-    <template #subtitle>
-      <button v-if="series" type="button" class="mx-auto mt-0.5 flex items-center gap-1.5 text-sm font-semibold" :class="series.rating == null && 'text-xs font-normal text-muted'" @click="ratingOpen = true"><RatingStars :value="series.rating ?? null" :size="14" />{{ series.rating == null ? '點此評分' : formatRating(series.rating) }}</button>
-    </template>
-  </PageHeader>
-  <PillTabs v-model="tab" size="sm" class="mb-4" :options="[{ value: 'works', label: `作品（${items.length}）` }, { value: 'review', label: reviewCount ? `心得（${reviewCount}）` : '心得' }]" />
+  <div class="relative isolate">
+    <!-- the cover, enlarged and blurred, fading into the page background (as on a work's page) -->
+    <div v-if="coverUrl" class="pointer-events-none absolute -inset-x-4 -top-24 bottom-14 -z-10 overflow-hidden" aria-hidden="true">
+      <img :src="coverUrl" class="size-full scale-125 object-cover opacity-70 blur-2xl" alt="" referrerpolicy="no-referrer" />
+      <div class="absolute inset-0 bg-gradient-to-b from-bg/10 via-bg/30 to-bg" />
+    </div>
+    <PageHeader :title="''" class="!bg-transparent">
+      <template #right>
+        <button v-if="tab === 'works'" class="circle-btn" :aria-label="view === 'list' ? '改為只顯示封面' : '改為列表'" @click="settings.s.seriesView = view === 'list' ? 'grid' : 'list'">
+          <LayoutGrid v-if="view === 'list'" :size="19" />
+          <List v-else :size="19" />
+        </button>
+        <button v-if="tab === 'review'" class="circle-btn" aria-label="寫心得" @click="newReview"><Plus :size="19" /></button>
+        <button class="circle-btn" aria-label="編輯系列" @click="edit"><Pencil :size="19" /></button>
+      </template>
+    </PageHeader>
+    <!-- same layout as a work's page: the cover on the left (the series' own, else its first work's), name, score and tags beside it -->
+    <div v-if="series" class="mb-4 flex gap-4">
+      <WorkCover :src="coverSrc" :title="series.name" class="h-40 w-28 shrink-0 shadow-sm" />
+      <div class="min-w-0 flex-1 self-end">
+        <p class="mb-0.5 text-xs font-semibold text-muted">系列</p>
+        <h1 class="text-lg leading-snug font-bold">{{ series.name }}</h1>
+        <button type="button" class="mt-1 flex items-center gap-1.5 text-sm font-semibold" :class="series.rating == null && 'text-xs font-normal text-muted'" @click="ratingOpen = true"><RatingStars :value="series.rating ?? null" :size="14" />{{ series.rating == null ? '點此評分' : formatRating(series.rating) }}</button>
+        <button type="button" class="mt-2 flex flex-wrap items-center gap-1.5 text-left" aria-label="設定系列標籤" @click="tagsOpen = true">
+          <span v-for="n in tagNames" :key="n" class="tag">{{ n }}</span>
+          <span v-if="!tagNames.length" class="text-xs text-muted">＋ 設定標籤</span>
+        </button>
+      </div>
+    </div>
+    <PillTabs v-model="tab" size="sm" class="mb-4" :options="[{ value: 'works', label: `作品（${items.length}）` }, { value: 'review', label: reviewCount ? `心得（${reviewCount}）` : '心得' }]" />
+  </div>
   <section v-if="series && tab === 'review'" class="mb-4">
     <p v-if="!reviewCount" class="empty-state [--empty-top:16rem]">還沒有心得，對整個系列的想法都可以寫在這裡。</p>
     <!-- 系列心得: pinned at the top, foldable -->
@@ -338,6 +407,7 @@ async function del() {
   </TransitionGroup>
 
   <RatingSheet v-model:open="ratingOpen" v-model="ratingDraft" />
+  <NamePickSheet v-model:open="tagsOpen" v-model="tagsModel" title="系列標籤" hint="系列內的作品將會套用這些標籤" multiple :items="tagItems" :create="createTag" />
   <NoteSheet v-model:open="noteOpen" :note="noteDraft" :is-new="noteNew" @save="saveReview" @remove="removeReview" />
 
   <Teleport to="body">
@@ -345,7 +415,21 @@ async function del() {
       <div v-if="editOpen" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-4" @click.self="editOpen = false" @keydown.esc="editOpen = false">
         <form class="card w-full max-w-[21rem] space-y-4 p-5 shadow-xl" role="dialog" aria-label="編輯系列" @submit.prevent="save">
           <h2 class="text-lg leading-snug font-bold">編輯系列</h2>
-          <input v-model="nameDraft" class="input" placeholder="系列名稱" />
+          <div>
+            <label class="label" for="series-name">名稱</label>
+            <input id="series-name" v-model="nameDraft" class="input" placeholder="系列名稱" />
+          </div>
+          <div>
+            <p class="label">主圖</p>
+            <!-- one row that scrolls sideways when there are many works; each picture is a fifth of the width (less the gaps), so five always fit and the fifth sits flush right -->
+            <div v-drag-scroll class="scrollbar-none -mx-5 flex gap-2 overflow-x-auto px-5 [scroll-padding-inline:1.25rem]">
+              <button v-for="c in coverChoices" :key="c.id" type="button" class="block aspect-[7/10] w-[calc((100%-2rem)/5)] shrink-0 rounded-lg border-primary transition-[padding] duration-150" :class="coverDraft === c.cover ? 'border-2 p-0.5' : 'border-0 p-0'" :aria-label="c.title" @click="coverDraft = c.cover">
+                <WorkCover :src="c.cover" :title="c.title" :icon-size="13" class="size-full" :class="coverDraft === c.cover && '!rounded-sm'" />
+              </button>
+              <button type="button" class="flex aspect-[7/10] w-[calc((100%-2rem)/5)] shrink-0 items-center justify-center rounded-lg border border-dashed border-line text-muted active:bg-surface-2" aria-label="上傳圖片" @click="coverFile?.click()"><Plus :size="16" /></button>
+              <input ref="coverFile" type="file" accept="image/*" class="hidden" @change="pickCover" />
+            </div>
+          </div>
           <div class="flex gap-3">
             <button type="button" class="btn btn-ghost shrink-0 px-3.5 text-sm text-danger" @click="del">刪除</button>
             <button type="submit" class="btn btn-primary min-w-0 flex-1 disabled:opacity-40" :disabled="!nameDraft.trim()">儲存</button>

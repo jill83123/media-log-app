@@ -132,9 +132,11 @@ export async function createCategory(name: string, parentId?: string): Promise<s
 
 /** deleting a tag/category/series also clears it from the works that used it */
 export async function removeTag(id: string) {
-  await db.transaction('rw', db.tags, db.works, async () => {
+  await db.transaction('rw', db.tags, db.works, db.series, async () => {
     for (const w of await db.works.filter((w) => w.tagIds.includes(id)).toArray())
       await db.works.update(w.id, { tagIds: w.tagIds.filter((t) => t !== id), updatedAt: now() })
+    for (const s of await db.series.filter((s) => !!s.tagIds?.includes(id)).toArray())
+      await db.series.update(s.id, { tagIds: s.tagIds!.filter((t) => t !== id), updatedAt: now() })
     await remove('tags', id)
   })
 }

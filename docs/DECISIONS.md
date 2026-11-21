@@ -19,7 +19,7 @@
 | 實體 | 重點欄位 |
 |---|---|
 | `work`（作品） | id、type（動畫／漫畫／小說／書籍／電影／劇集…可自訂）、title、原名、封面（網址或 Drive 檔案 id）、作者/製作、簡介、外部來源 id（bangumi/douban/goodreads/博客來）、`seriesId`、`seriesOrder`、標籤 id[]、`deleted` |
-| `series`（系列） | id、名稱、封面；同系列不同集/季/冊的作品掛在同一系列底下集中管理，系列頁彙總進度與平均分 |
+| `series`（系列） | id、名稱、封面（預設用第一個作品的，可改選系列內作品的封面或自行上傳）、標籤 id[]（系列內作品視同帶有這些標籤，顯示與篩選皆含）；同系列不同集/季/冊的作品掛在同一系列底下集中管理，系列頁彙總進度與平均分 |
 | `record`（一次觀看/閱讀，即「週目」） | id、workId、round（第幾次）、status、progress{current,total,unit,infinite}、rating(0.5–5)或空、startDate、endDate、review（心得，Markdown）、`deleted` |
 | `progressLog`（進度歷史） | id、recordId、progress、date（可模糊）、note（今日筆記）— 同一週目的每次更新都留一筆，如截圖的時間軸 |
 | `tag`（標籤） | 使用者自建，多對多。分類已併入標籤：舊分類會自動轉成同名標籤，`category` 表只為相容舊資料與同步而保留，畫面上不再有分類 |

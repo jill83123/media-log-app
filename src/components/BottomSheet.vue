@@ -5,7 +5,7 @@ import { X } from '@/lib/uiIcons'
 import { lockScroll } from '@/lib/scrollLock'
 
 /** `high`: for a sheet opened from a small window, which would otherwise cover it */
-const { fade = true } = defineProps<{ title?: string; subtitle?: string; fade?: boolean; high?: boolean }>()
+const { fade = true } = defineProps<{ title?: string; subtitle?: string; /** small print right under the title, inside the header */ hint?: string; fade?: boolean; high?: boolean }>()
 const open = defineModel<boolean>({ required: true })
 
 /** the fades above and below the pinned bars only make sense while the list actually scrolls */
@@ -69,7 +69,10 @@ onBeforeUnmount(() => {
         <!-- grab handle: a visual cue that this is a sheet you can dismiss -->
         <div class="mx-auto mt-2.5 h-1 w-10 shrink-0 rounded-full bg-line" aria-hidden="true" />
         <div class="flex shrink-0 touch-none items-center justify-between gap-3 px-5 pt-3 pb-4">
-          <h2 class="min-w-0 text-lg font-bold">{{ title }}<span v-if="subtitle" class="ml-2 text-xs font-normal text-muted">{{ subtitle }}</span></h2>
+          <div class="min-w-0">
+            <h2 class="text-lg font-bold">{{ title }}<span v-if="subtitle" class="ml-2 text-xs font-normal text-muted">{{ subtitle }}</span></h2>
+            <p v-if="hint" class="mt-0.5 text-xs text-muted">{{ hint }}</p>
+          </div>
           <div class="ml-auto flex items-center gap-2">
             <slot name="actions" />
             <button class="icon-btn border-0 bg-transparent" aria-label="關閉" @click="open = false">

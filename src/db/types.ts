@@ -58,6 +58,8 @@ export interface Series extends Base {
   /** position in the user's own order */
   order?: number
   cover?: string
+  /** tags every work in the series carries too (shown and filtered as if the work had them) */
+  tagIds?: string[]
   /** the whole series' score, like a work's */
   rating?: number
   /** overall thoughts on the whole series (總心得), as many as you like, each with its own date */

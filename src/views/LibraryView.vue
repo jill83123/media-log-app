@@ -123,7 +123,7 @@ const yearChoices = computed(() => {
   if (f.value.year) all.add(f.value.year)
   return [...all].sort().reverse()
 })
-const tagChoices = computed(() => data.tagsByUse.filter((t) => f.value.tagIds.includes(t.id) || scopeWorks.value.some((w) => w.tagIds.includes(t.id))))
+const tagChoices = computed(() => data.tagsByUse.filter((t) => f.value.tagIds.includes(t.id) || scopeWorks.value.some((w) => data.tagIdsOf(w).includes(t.id))))
 /** what to order by, and the two ways of each (the first is 'down') */
 const WORK_SORTS = [
   { value: 'time', label: '時間', dirs: ['新到舊', '舊到新'] },
@@ -149,7 +149,7 @@ function byScore<T>(list: T[], score: (x: T) => number | null | undefined, down:
   })
 }
 const rows = computed(() => {
-  const list = allRows.value.filter((x) => matches(x, f.value, data.categories, yearsOf(x.record ? [x.record] : [], thisYear)))
+  const list = allRows.value.filter((x) => matches(x, f.value, data.categories, yearsOf(x.record ? [x.record] : [], thisYear), data.tagIdsOf(x.work)))
   const down = settings.s.libraryDir === 'down'
   const s = settings.s.librarySort
   if (s === 'title') return [...list].sort((a, b) => (down ? 1 : -1) * a.work.title.localeCompare(b.work.title, 'zh-Hant'))
@@ -160,11 +160,13 @@ const rows = computed(() => {
 /** the series tab's own filter: a score at least, or the unscored */
 const sMinRating = ref(0)
 const sUnrated = ref(false)
+const sTagIds = ref<string[]>([])
 const seriesList = computed(() => {
   const q = f.value.query.trim().toLowerCase()
   const type = settings.s.libraryType
   // a series with no works yet belongs to no type: it is listed under every one, so it can be found and filled
   let list = seriesRows(data.series, data.works).filter((r) => (!type || !r.group || r.group === type) && (!q || r.name.toLowerCase().includes(q)))
+  if (sTagIds.value.length) list = list.filter((r) => sTagIds.value.every((t) => r.tagIds.includes(t)))
   if (sUnrated.value) list = list.filter((r) => r.rating == null)
   else if (sMinRating.value) list = list.filter((r) => (r.rating ?? 0) >= sMinRating.value)
   const s = settings.s.seriesSort
@@ -207,7 +209,9 @@ async function finishOrdering() {
 }
 // the list being edited is of one type: leaving that type, or the tab, ends the editing
 watch([() => settings.s.libraryType, libTab], () => (ordering.value = false))
-const seriesActive = computed(() => (sMinRating.value || sUnrated.value ? 1 : 0))
+const seriesActive = computed(() => (sMinRating.value || sUnrated.value ? 1 : 0) + (sTagIds.value.length ? 1 : 0))
+/** tags that some series carries (and any already picked) */
+const sTagChoices = computed(() => data.tagsByUse.filter((t) => sTagIds.value.includes(t.id) || data.series.some((s) => s.tagIds?.includes(t.id))))
 /** the number on the filter button: the type is what the list is of, not a filter, so it is not counted */
 /** a tag's page lists each work once, whatever its rounds, with its best rating */
 const tagWorks = computed(() => {
@@ -422,6 +426,12 @@ const ratingSteps = computed(() => [0, ...mergeRatings(settings.s.ratings).map((
           <button v-for="o in SERIES_SORTS" :key="o.value" class="chip" :class="settings.s.seriesSort === o.value && 'chip-on'" @click="settings.s.seriesSort = o.value">{{ o.label }}</button>
         </div>
       </div>
+      <div v-if="sTagChoices.length">
+        <span class="label">標籤（需全部符合）</span>
+        <div class="flex flex-wrap gap-2">
+          <button v-for="t in sTagChoices" :key="t.id" class="chip" :class="sTagIds.includes(t.id) && 'chip-on'" @click="toggle(sTagIds, t.id)">{{ t.name }}</button>
+        </div>
+      </div>
       <div>
         <span class="label">評分至少</span>
         <div class="flex flex-wrap gap-2">
@@ -474,7 +484,7 @@ const ratingSteps = computed(() => [0, ...mergeRatings(settings.s.ratings).map((
     </div>
     <template #footer>
       <div class="grid grid-cols-[auto_1fr] gap-2">
-        <button class="btn btn-ghost" @click="libTab === 'series' && !tagName ? ((sMinRating = 0), (sUnrated = false)) : (f = { ...emptyFilter(), types: f.types, query: f.query })">清除</button>
+        <button class="btn btn-ghost" @click="libTab === 'series' && !tagName ? ((sMinRating = 0), (sUnrated = false), (sTagIds = [])) : (f = { ...emptyFilter(), types: f.types, query: f.query })">清除</button>
         <button class="btn btn-primary" @click="sheet = false">顯示 {{ libTab === 'series' && !tagName ? seriesList.length : rows.length }} 筆</button>
       </div>
     </template>

@@ -9,6 +9,8 @@ const props = defineProps<{
   items: { id: string; name: string; indent?: number }[]
   multiple?: boolean
   noneLabel?: string
+  /** small print right under the title */
+  hint?: string
   create: (name: string) => Promise<string>
 }>()
 const open = defineModel<boolean>('open', { required: true })
@@ -40,7 +42,7 @@ function none() {
 </script>
 
 <template>
-  <BottomSheet v-model="open" :title="title">
+  <BottomSheet v-model="open" :title="title" :hint="hint">
     <form class="mb-3 flex gap-2" @submit.prevent="add">
       <input v-model="text" class="input" placeholder="輸入名稱" />
       <button class="btn btn-primary shrink-0 px-4" :disabled="!text.trim()"><Plus :size="18" /></button>

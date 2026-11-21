@@ -19,7 +19,7 @@ UI 變更用 preview（`.claude/launch.json` 的 `dev`）驗證；`#/dev` 是元
 - 模糊日期＝字串 `''|YYYY|YYYY-MM|YYYY-MM-DD`（`lib/date.ts`）。
 
 ## Stores `src/stores/`（Pinia）
-- `data.ts` `useData`：所有未刪除列的記憶體快取（works/series/records/notes/progressLogs/tags/categories）＋衍生 `workById`、`tagUse`、`tagsByUse`、`latestRecord`、`library`（作品頁清單）。IndexedDB 變動會自動刷新。
+- `data.ts` `useData`：所有未刪除列的記憶體快取（works/series/records/notes/progressLogs/tags/categories）＋衍生 `workById`、`tagIdsOf`（作品標籤＋所屬系列標籤）、`tagUse`、`tagsByUse`、`latestRecord`、`library`（作品頁清單）。IndexedDB 變動會自動刷新。
 - `settings.ts` `useSettings`：本機設定 `s`（theme、themeColor、ratings、types、units、workerUrl、sourcesByType、libraryView、提醒…，存 localStorage）；`sharedValues/applyShared` 供同步共用設定（ratings、units、types）。
 - `sync.ts` `useSync`：Google 同步狀態與動作（connect/syncNow/備份/還原），開啟、變更後、離開時自動同步。
 - `push.ts` `usePush`：推播訂閱與提醒開關。
@@ -47,7 +47,7 @@ UI 變更用 preview（`.claude/launch.json` 的 `dev`）驗證；`#/dev` 是元
 | `/` | `LibraryView` | 作品頁：搜尋、篩選、排序、時間軸/格狀、**作品／系列分頁**（系列用 `SeriesList`）、同步雲圖示 |
 | `/work/:id` | `WorkView` | 作品詳情：週目、評分、進度、心得/筆記 |
 | `/work/new`、`/work/:id/edit` | `WorkEditView` | 新增/編輯作品（`CoverSearchSheet` 搜尋封面） |
-| `/series/:id` | `SeriesView` | 系列頁：作品排序、系列評分與總心得 |
+| `/series/:id` | `SeriesView` | 系列頁：版型同作品頁（左側主圖，預設第一個作品的封面，可在編輯裡改選別的作品封面或自行上傳）、作品排序、系列標籤（套用到底下作品）、系列評分與總心得 |
 | `/stats` | `StatsView` | 分頁「總覽」`stats/OverviewTab`（內含 `HeatmapTab`）、「心得」`stats/ReviewsTab` |
 | `/calendar` | `CalendarView` | 月曆（用 `stats/CalendarTab`） |
 | `/settings` | `SettingsView` | 入口；子頁 `views/settings/`：Types、Ratings、Appearance、Sources、Notify、Sync |

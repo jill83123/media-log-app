@@ -34,6 +34,8 @@ export function matches(
   cats: { id: string; parentId?: string }[] = [],
   /** the years any round of this work started or ended in; a work with no dates at all counts as the current year */
   years?: Set<string>,
+  /** the work's tags including its series'; defaults to the work's own */
+  tagIds: string[] = item.work.tagIds,
 ): boolean {
   const { work, record } = item
   const q = f.query.trim().toLowerCase()
@@ -41,7 +43,7 @@ export function matches(
   if (f.year && years && !years.has(f.year)) return false
   if (f.types.length && !f.types.includes(work.type)) return false
   if (f.statuses.length && !f.statuses.includes(record?.status ?? 'todo')) return false
-  if (f.tagIds.length && !f.tagIds.every((t) => work.tagIds.includes(t))) return false
+  if (f.tagIds.length && !f.tagIds.every((t) => tagIds.includes(t))) return false
   if (f.categoryId && !(work.categoryId && descendants(f.categoryId, cats).includes(work.categoryId))) return false
   if (f.minRating && !(record?.rating != null && (scoreOf(record.rating) ?? -Infinity) >= f.minRating)) return false
   if (f.unrated && !(record && record.status === 'done' && record.rating == null)) return false

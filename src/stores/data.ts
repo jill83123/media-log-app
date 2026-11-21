@@ -50,10 +50,19 @@ export const useData = defineStore('data', () => {
 
   const workById = computed(() => new Map(works.value.map((w) => [w.id, w])))
 
+  /** a work's tags: its own plus those of its series */
+  const tagIdsOf = computed(() => {
+    const byId = new Map(series.value.map((s) => [s.id, s.tagIds ?? []]))
+    return (w: Work): string[] => {
+      const extra = w.seriesId ? byId.get(w.seriesId) : undefined
+      return extra?.length ? [...new Set([...w.tagIds, ...extra])] : w.tagIds
+    }
+  })
+
   /** how many works carry each tag */
   const tagUse = computed(() => {
     const m = new Map<string, number>()
-    for (const w of works.value) for (const id of w.tagIds) m.set(id, (m.get(id) ?? 0) + 1)
+    for (const w of works.value) for (const id of tagIdsOf.value(w)) m.set(id, (m.get(id) ?? 0) + 1)
     return m
   })
   /** the tags, most used first (ties by name): the order every tag list shows */
@@ -79,5 +88,5 @@ export const useData = defineStore('data', () => {
       }),
   )
 
-  return { ready, start, works, series, records, notes, progressLogs, tags, categories, workById, tagUse, tagsByUse, latestRecord, library }
+  return { ready, start, works, series, records, notes, progressLogs, tags, categories, workById, tagIdsOf, tagUse, tagsByUse, latestRecord, library }
 })
