@@ -19,9 +19,9 @@ const sheet = ref(false)
 /** the works that had something happen on each day (a work shows once per day) */
 const byDay = computed(() => {
   const m = new Map<string, DayEvent[]>()
-  // the work shown on a day is the most meaningful thing that happened: finished, then started, then just a note
-  const rank = { finish: 0, start: 1, progress: 2, note: 3 }
-  for (const e of [...props.events].sort((a, b) => rank[a.kind] - rank[b.kind])) {
+  // the work shown on a day is the most meaningful thing that happened: finished, review, started, progress, then a plain note
+  const rank = (e: DayEvent) => (e.kind === 'finish' ? 0 : e.kind === 'note' ? (e.isNote ? 4 : 1) : e.kind === 'start' ? 2 : 3)
+  for (const e of [...props.events].sort((a, b) => rank(a) - rank(b))) {
     if (precision(e.date) !== 'day') continue
     const list = m.get(e.date) ?? []
     if (!list.some((x) => x.work.id === e.work.id)) list.push(e)
