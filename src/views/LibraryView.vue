@@ -55,12 +55,16 @@ if (!workTypes().some((t) => t.value === settings.s.libraryType)) settings.s.lib
 /** the list shows every year until one is picked */
 const f = ref({ ...emptyFilter(), types: settings.s.libraryType ? [settings.s.libraryType] : [] })
 /** a tag chip on a work page lands here with ?tag=: show everything carrying it */
+let listing = false
 function applyQuery() {
   const { tag, type, creator } = route.query
   // the tag is looked at within the type of the work it was tapped on
   if (typeof tag === 'string') f.value = { ...emptyFilter(), tagIds: [tag], types: typeof type === 'string' ? [type as WorkType] : [] }
   // a creator's works across every type: the same maker often has a film and a book
   else if (typeof creator === 'string' && creator) f.value = { ...emptyFilter(), creator }
+  // this page is kept alive: leaving a tag's / creator's list for the plain list must drop that filter
+  else if (listing) f.value = { ...emptyFilter(), types: settings.s.libraryType ? [settings.s.libraryType] : [] }
+  listing = typeof tag === 'string' || (typeof creator === 'string' && !!creator)
 }
 /** on a tag's or a creator's page the title is its name, not a type */
 const tagName = computed(() => {
