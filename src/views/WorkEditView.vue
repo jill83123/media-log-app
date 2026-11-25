@@ -186,7 +186,7 @@ async function removeThis() {
         </button>
       </li>
     </ul>
-    <p v-if="editingId && form.updatedAt" class="px-1 text-xs leading-5 text-muted">
+    <p v-if="editingId && form.updatedAt" class="-mt-1 px-1 text-xs leading-5 text-muted">
       <span v-if="form.createdAt" class="block">建立 {{ stamp(form.createdAt) }}</span>
       <span v-if="!form.createdAt || stamp(form.updatedAt) !== stamp(form.createdAt)" class="block">更新 {{ stamp(form.updatedAt) }}</span>
     </p>

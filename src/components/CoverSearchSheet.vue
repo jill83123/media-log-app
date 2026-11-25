@@ -198,10 +198,10 @@ const saving = ref(false)
       <button class="icon-btn -mr-2 border-0 bg-transparent text-muted" aria-label="關閉" @click="open = false"><X :size="18" /></button>
     </div>
     <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pt-2 pb-5">
-    <div v-if="noWorker" class="flex flex-col items-center gap-3 px-4 py-8 text-center">
+    <div v-if="noWorker" class="flex flex-col items-center gap-1 px-4 py-8 text-center">
       <p class="font-semibold">尚未設定搜尋服務</p>
       <p class="text-sm text-muted">填入 Worker 網址後才能搜尋</p>
-      <RouterLink to="/settings/sync" class="btn btn-soft px-6" @click="open = false">前往設定</RouterLink>
+      <RouterLink to="/settings/sync" class="btn btn-soft mt-3 px-6" @click="open = false">前往設定</RouterLink>
     </div>
     <template v-else>
       <!-- one row that scrolls sideways, so it stays a single quiet line above the box -->
