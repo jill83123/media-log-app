@@ -1,5 +1,6 @@
 import { reactive } from 'vue'
-import { createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHashHistory, START_LOCATION } from 'vue-router'
+import { useSync } from '@/stores/sync'
 
 /** what the last navigation did to the scroll position, for pages that place themselves */
 export const scroll = reactive({
@@ -9,7 +10,7 @@ export const scroll = reactive({
   calendar: 0,
 })
 
-export default createRouter({
+const router = createRouter({
   history: createWebHashHistory(),
   // going back restores where the page was; a new page starts at the top; the calendar places itself on the current month
   scrollBehavior: (to, _from, saved) => {
@@ -41,3 +42,11 @@ export default createRouter({
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 })
+
+// the add / edit pages are edits: wait for the first sync
+router.beforeEach((to, from) => {
+  if (from === START_LOCATION) return true // a reload landing here must still show something
+  if (to.path === '/work/new' || to.path.endsWith('/edit')) return useSync().guardEdit()
+})
+
+export default router

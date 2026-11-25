@@ -5,6 +5,7 @@ import { useData } from '@/stores/data'
 import { useCover } from '@/lib/covers'
 import { fileToCover } from '@/lib/image'
 import { useUi } from '@/stores/ui'
+import { useSync } from '@/stores/sync'
 import { useSettings } from '@/stores/settings'
 import { createTag, put, removeSeries } from '@/lib/repo'
 import NamePickSheet from '@/components/NamePickSheet.vue'
@@ -27,6 +28,7 @@ const route = useRoute()
 const router = useRouter()
 const data = useData()
 const ui = useUi()
+const sync = useSync()
 const settings = useSettings()
 /** list ⇄ covers only; the button shows the layout it switches to */
 const view = computed(() => (settings.s.seriesView === 'grid' ? 'grid' : 'list'))
@@ -213,6 +215,7 @@ async function pickCover(e: Event) {
   }
 }
 function edit() {
+  if (!sync.guardEdit()) return
   nameDraft.value = series.value?.name ?? ''
   coverDraft.value = coverSrc.value ?? ''
   editOpen.value = true
@@ -267,11 +270,13 @@ const reviewCount = computed(() => mine.value.length + reviews.value.length)
 /** the editor is the work notes' one: a review of the series is shaped like a note */
 const asNote = (r: SeriesReview): WorkNote => ({ ...r, workId: series.value!.id })
 function newReview() {
+  if (!sync.guardEdit()) return
   noteNew.value = true
   noteDraft.value = { id: uid(), updatedAt: Date.now(), workId: series.value!.id, date: today(), body: '' }
   noteOpen.value = true
 }
 function editReview(r: SeriesReview) {
+  if (!sync.guardEdit()) return
   noteNew.value = false
   noteDraft.value = asNote(r)
   noteOpen.value = true
@@ -318,8 +323,8 @@ async function del() {
       <div class="min-w-0 flex-1 self-end">
         <p class="mb-0.5 text-xs font-semibold text-muted">系列</p>
         <h1 class="text-lg leading-snug font-bold">{{ series.name }}</h1>
-        <button type="button" class="mt-1 flex items-center gap-1.5 text-sm font-semibold" :class="series.rating == null && 'text-xs font-normal text-muted'" @click="ratingOpen = true"><RatingStars :value="series.rating ?? null" :size="14" />{{ series.rating == null ? '點此評分' : formatRating(series.rating) }}</button>
-        <button type="button" class="mt-2 flex flex-wrap items-center gap-1.5 text-left" aria-label="設定系列標籤" @click="tagsOpen = true">
+        <button type="button" class="mt-1 flex items-center gap-1.5 text-sm font-semibold" :class="series.rating == null && 'text-xs font-normal text-muted'" @click="sync.guardEdit() && (ratingOpen = true)"><RatingStars :value="series.rating ?? null" :size="14" />{{ series.rating == null ? '點此評分' : formatRating(series.rating) }}</button>
+        <button type="button" class="mt-2 flex flex-wrap items-center gap-1.5 text-left" aria-label="設定系列標籤" @click="sync.guardEdit() && (tagsOpen = true)">
           <span v-for="n in tagNames" :key="n" class="tag">{{ n }}</span>
           <span v-if="!tagNames.length" class="text-xs text-muted">＋ 設定標籤</span>
         </button>

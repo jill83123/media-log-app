@@ -19,6 +19,18 @@ export const useSync = defineStore('sync', () => {
   let timer: ReturnType<typeof setTimeout> | undefined
   let running: Promise<void> | null = null
   let dirty = false
+  /** bumps on every local change, so a sync can tell whether something was edited while it ran */
+  let version = 0
+  /** true only during the first sync after opening the app: edits wait so they never land on stale local data */
+  const startupLock = ref(false)
+  const STARTUP_LOCK_MAX_MS = 6000
+
+  /** call where an edit starts: false (with a toast) while the first sync is still running */
+  function guardEdit(): boolean {
+    if (!startupLock.value) return true
+    ui.toast('同步中，完成後才能編輯', 'info')
+    return false
+  }
 
   const refreshWorker = () => setWorkerUrl(settings.workerUrl())
   watch(() => settings.s.workerUrl, refreshWorker, { immediate: true })
@@ -38,13 +50,20 @@ export const useSync = defineStore('sync', () => {
       if (document.visibilityState === 'hidden' && dirty) void syncNow(true)
     })
     window.addEventListener('online', () => dirty && void syncNow(true))
-    if (connected.value) void syncNow(true)
-    else status.value = connected.value ? 'idle' : 'off'
+    if (connected.value) {
+      // offline can't pull anything, so don't lock; the cap keeps a slow network from locking the app
+      if (navigator.onLine) {
+        startupLock.value = true
+        setTimeout(() => (startupLock.value = false), STARTUP_LOCK_MAX_MS)
+      }
+      void syncNow(true)
+    } else status.value = 'off'
   }
 
   function touch() {
     if (syncFlags.applying || !connected.value) return
     dirty = true
+    version++
     if (status.value === 'idle') status.value = 'dirty'
     clearTimeout(timer)
     timer = setTimeout(() => void syncNow(true), 6000)
@@ -84,6 +103,7 @@ export const useSync = defineStore('sync', () => {
     if (running) return running
     clearTimeout(timer)
     running = (async () => {
+      const startedAt = version
       status.value = 'syncing'
       error.value = ''
       try {
@@ -98,10 +118,17 @@ export const useSync = defineStore('sync', () => {
           ids: settings.s,
           shared: { get: settings.sharedValues, apply: settings.applyShared },
           save: (ids) => Object.assign(settings.s, ids),
+          onMerged: () => (startupLock.value = false),
         })
-        dirty = false
         settings.s.lastSyncAt = Date.now()
-        status.value = 'idle'
+        if (version === startedAt) {
+          dirty = false
+          status.value = 'idle'
+        } else {
+          // edited while syncing: that change may have missed this round, so go again
+          status.value = 'dirty'
+          timer = setTimeout(() => void syncNow(true), 1000)
+        }
         if (!quiet) ui.toast(r.pulled ? `同步完成，更新 ${r.pulled} 筆` : '同步完成', 'success')
       } catch (e) {
         if (e instanceof DriveAuthError) {
@@ -112,6 +139,7 @@ export const useSync = defineStore('sync', () => {
         if (!quiet) ui.toast(error.value, 'error')
       } finally {
         running = null
+        startupLock.value = false
       }
     })()
     return running
@@ -163,5 +191,5 @@ export const useSync = defineStore('sync', () => {
       ui.toast('已還原', 'success')
     })
 
-  return { status, error, connected, init, connect, disconnect, syncNow, backups, backupBusy, loadBackups, backUpNow, restore }
+  return { status, error, startupLock, guardEdit, connected, init, connect, disconnect, syncNow, backups, backupBusy, loadBackups, backUpNow, restore }
 })

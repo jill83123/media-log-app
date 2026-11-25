@@ -26,6 +26,8 @@ export interface SyncOptions {
   shared: { get: () => SharedValue[]; apply: (key: string, value: unknown, updatedAt: number) => void }
   /** the engine reports new ids it created so they can be remembered */
   save: (ids: Partial<SyncSettings>) => void
+  /** called once this device and Drive agree; what is left (clean-up) does not touch the data */
+  onMerged?: () => void
 }
 
 export interface SyncResult {
@@ -83,9 +85,10 @@ async function uploadCovers(o: SyncOptions, remote: Map<string, dv.RemoteImage>)
 
 export async function runSync(o: SyncOptions): Promise<SyncResult> {
   const { token } = o
-  const file = await loadFile(o)
+  // the data file and the picture list are independent requests
+  const [file, images] = await Promise.all([loadFile(o), dv.listImages(token)])
   const remoteData = file.data
-  await uploadCovers(o, await dv.listImages(token))
+  await uploadCovers(o, images)
 
   let pulled = 0
   let stale = !remoteData
@@ -130,12 +133,14 @@ export async function runSync(o: SyncOptions): Promise<SyncResult> {
   out.settings = o.shared.get()
 
   if (stale) {
-    if (remoteData) await backUp(token, remoteData)
-    const id = await dv.writeData(token, file.id, out)
+    // the backup is of what Drive held before, which is already in memory, so it can go up while the new data does
+    const [id] = await Promise.all([dv.writeData(token, file.id, out), remoteData ? backUp(token, remoteData) : undefined])
     if (id !== o.ids.dataFileId) o.save({ dataFileId: id })
   } else if (file.id !== o.ids.dataFileId) o.save({ dataFileId: file.id })
+  o.onMerged?.()
 
-  await cleanImages(o)
+  // pictures only become unused when rows changed, here or on Drive
+  if (stale || pulled) await cleanImages(o, images)
   return { pulled, pushed: stale }
 }
 
@@ -231,10 +236,10 @@ export async function applyData(shared: SyncOptions['shared'], data: DataFile) {
 }
 
 /** pictures of deleted works, or replaced by another cover, are removed from Drive and from this device so the data does not keep growing */
-async function cleanImages(o: SyncOptions) {
+async function cleanImages(o: SyncOptions, remote: Map<string, dv.RemoteImage>) {
   try {
     const used = await referencedImages()
-    for (const id of unusedImages(await dv.listImages(o.token), used)) await dv.deleteFile(o.token, id)
+    for (const id of unusedImages(remote, used)) await dv.deleteFile(o.token, id)
     await pruneLocalImages()
   } catch {
     /* clean-up is retried at the next sync; it must not fail the sync itself */

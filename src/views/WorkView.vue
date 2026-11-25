@@ -11,6 +11,7 @@ import { useCover } from '@/lib/covers'
 import { logProgress, progressLogId, put, remove, removeRecord, setProgress, startNewRound } from '@/lib/repo'
 import { useData } from '@/stores/data'
 import { useUi } from '@/stores/ui'
+import { useSync } from '@/stores/sync'
 import { Layers, Minus, Pencil, Plus, ChevronDown } from '@/lib/uiIcons'
 import CheckField from '@/components/CheckField.vue'
 import FuzzyDateField from '@/components/FuzzyDateField.vue'
@@ -28,6 +29,7 @@ import PopupDialog from '@/components/PopupDialog.vue'
 const route = useRoute()
 const data = useData()
 const ui = useUi()
+const guardEdit = () => useSync().guardEdit()
 
 const work = computed(() => data.workById.get(route.params.id as string))
 const rounds = computed(() => data.records.filter((r) => r.workId === work.value?.id).sort((a, b) => a.round - b.round))
@@ -79,12 +81,14 @@ const noteOpen = ref(false)
 const noteNew = ref(false)
 const noteDraft = ref<WorkNote>({ id: '', updatedAt: 0, workId: '', date: '', body: '' })
 function newNote(kind?: 'note') {
+  if (!guardEdit()) return
   noteNew.value = true
   const here = latest_.value?.progress.current
   noteDraft.value = { id: uid(), updatedAt: Date.now(), workId: work.value!.id, date: today(), body: '', ...(kind ? { kind } : {}), ...(kind && here ? { progress: here } : {}) }
   noteOpen.value = true
 }
 function editNote(n: WorkNote) {
+  if (!guardEdit()) return
   noteNew.value = false
   noteDraft.value = n
   noteOpen.value = true
@@ -99,6 +103,7 @@ async function removeNote() {
 // ---- a round: dates, status, score ----
 const recordOpen = ref(false)
 function editRound(r: Rec) {
+  if (!guardEdit()) return
   roundId.value = r.id
   recordOpen.value = true
 }
@@ -115,6 +120,7 @@ const ratingDraft = computed<number | null>({
   },
 })
 function rate(id: string) {
+  if (!guardEdit()) return
   ratingRoundId.value = id
   ratingOpen.value = true
 }
@@ -132,7 +138,7 @@ async function changeProgress(r: Rec, value: number) {
 const topOf = (p: Progress) => (!p.infinite && p.total > 0 ? p.total : Infinity)
 async function nudge(n: number) {
   const r = latest_.value
-  if (!r) return
+  if (!r || !guardEdit()) return
   const next = Math.min(topOf(r.progress), Math.max(0, r.progress.current + n))
   if (next !== r.progress.current) await changeProgress(r, next)
 }
@@ -141,6 +147,9 @@ async function nudge(n: number) {
 const showsDates = (r: Rec) => !!r.start || !!r.end || r.status === 'doing' || r.status === 'todo'
 const showsProgress = (r: { id: string; status: string }) => r.id !== latest_.value?.id && r.status !== 'done'
 const progressOpen = ref(false)
+function openProgress() {
+  if (guardEdit()) progressOpen.value = true
+}
 const drawerValue = ref(0)
 /** the sheet never shows a number above the total: typing past it snaps back to it */
 function setDrawer(v: number, input?: HTMLInputElement) {
@@ -163,7 +172,7 @@ async function saveDrawer() {
 /** a new round starts right away; the earlier rounds are left as they are, the user changes their status when they want */
 async function startRound() {
   const r = latest_.value
-  if (!r) return
+  if (!r || !guardEdit()) return
   const next = await startNewRound(r, work.value)
   ui.toast(`開始 ${next.round} 刷`, 'success')
 }
@@ -238,6 +247,7 @@ const dayLink = ref(false)
 /** the entry being edited; '' when adding one for a day that has none yet */
 const dayLogId = ref('')
 function addDay(r: Rec) {
+  if (!guardEdit()) return
   dayRec.value = r
   dayLogId.value = ''
   dayDate.value = today()
@@ -247,6 +257,7 @@ function addDay(r: Rec) {
   dayOpen.value = true
 }
 function editDay(r: Rec, l: ProgressLog) {
+  if (!guardEdit()) return
   dayRec.value = r
   dayLogId.value = l.id
   dayDate.value = l.date
@@ -379,8 +390,8 @@ async function removeDay() {
             </button>
             <!-- progress sits inside the round it belongs to: - / + change it right away, tapping the number types one in -->
             <div v-if="r.id === latest_?.id" class="-mb-1.5 flex items-center gap-3">
-              <button class="shrink-0 text-sm font-semibold" @click="progressOpen = true">{{ progressText(r.progress) }}</button>
-              <button class="flex min-w-0 flex-1 items-center self-stretch py-2.5" aria-label="輸入進度" @click="progressOpen = true"><span v-if="!r.progress.infinite" class="h-1.5 w-full overflow-hidden rounded-full bg-line"><span class="block h-full bg-primary" :style="{ width: `${progressRatio(r.progress) * 100}%` }" /></span></button>
+              <button class="shrink-0 text-sm font-semibold" @click="openProgress">{{ progressText(r.progress) }}</button>
+              <button class="flex min-w-0 flex-1 items-center self-stretch py-2.5" aria-label="輸入進度" @click="openProgress"><span v-if="!r.progress.infinite" class="h-1.5 w-full overflow-hidden rounded-full bg-line"><span class="block h-full bg-primary" :style="{ width: `${progressRatio(r.progress) * 100}%` }" /></span></button>
               <button class="icon-btn size-9 border-0 disabled:opacity-30" :disabled="r.progress.current <= 0" aria-label="減一" @click="nudge(-1)"><Minus :size="16" /></button>
               <button class="icon-btn size-9 border-0 disabled:opacity-30" :disabled="r.progress.current >= topOf(r.progress)" aria-label="加一" @click="nudge(1)"><Plus :size="16" /></button>
             </div>

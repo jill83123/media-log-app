@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useData } from '@/stores/data'
 import { useUi } from '@/stores/ui'
+import { useSync } from '@/stores/sync'
 import { createTag, put, removeTag } from '@/lib/repo'
 import { Plus } from '@/lib/uiIcons'
 import PopupDialog from '@/components/PopupDialog.vue'
@@ -10,6 +11,7 @@ import PageHeader from '@/components/PageHeader.vue'
 /** Rename / delete / add tags. They are listed by how many works use them (the same order every tag list shows). */
 const data = useData()
 const ui = useUi()
+const sync = useSync()
 const text = ref('')
 const open = ref(false)
 
@@ -27,6 +29,7 @@ const editing = ref<Row | null>(null)
 const editName = ref('')
 const editOpen = computed({ get: () => editing.value !== null, set: (v) => !v && (editing.value = null) })
 function edit(r: Row) {
+  if (!sync.guardEdit()) return
   editing.value = r
   editName.value = r.name
 }
@@ -50,7 +53,7 @@ async function del() {
 <template>
   <PageHeader title="標籤" back="/settings">
     <template #right>
-      <button class="inline-flex size-10 items-center justify-center text-ink transition active:scale-90" aria-label="新增標籤" @click="open = true"><Plus :size="28" :stroke-width="2" /></button>
+      <button class="inline-flex size-10 items-center justify-center text-ink transition active:scale-90" aria-label="新增標籤" @click="sync.guardEdit() && (open = true)"><Plus :size="28" :stroke-width="2" /></button>
     </template>
   </PageHeader>
   <p v-if="!rows.length" class="empty-state [--empty-top:10rem]">還沒有標籤</p>

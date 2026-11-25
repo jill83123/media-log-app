@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
-import { NavCalendar, NavLibrary, NavSettings, NavStats } from '@/lib/uiIcons'
+import { LoaderCircle, NavCalendar,NavLibrary, NavSettings, NavStats } from '@/lib/uiIcons'
 import UiLayer from '@/components/UiLayer.vue'
+import { useSync } from '@/stores/sync'
 
+const sync = useSync()
 const route = useRoute()
 const showNav = computed(() => route.meta.nav === true)
 
@@ -45,6 +47,15 @@ const isActive = (to: string) => route.path === to
       </RouterLink>
     </div>
   </nav>
+
+  <!-- first sync after opening: browsing is fine, edits are refused (sync.guardEdit) so they don't land on stale local data -->
+  <Transition name="fade">
+    <div v-if="sync.startupLock" class="pointer-events-none fixed inset-x-0 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-80 flex justify-center" aria-live="polite">
+      <div class="flex items-center gap-2 rounded-2xl border border-primary/30 bg-surface px-4 py-2.5 text-sm font-semibold text-primary shadow-(--shadow-lg)">
+        <LoaderCircle :size="16" class="animate-spin" />同步中
+      </div>
+    </div>
+  </Transition>
 
   <UiLayer />
 </template>

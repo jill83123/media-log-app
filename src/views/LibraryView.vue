@@ -307,7 +307,7 @@ const ratingSteps = computed(() => [0, ...mergeRatings(settings.s.ratings).map((
     <h1 v-if="tagName" class="max-w-[60%] truncate text-xl font-bold">{{ tagName }}</h1>
     <button v-else class="relative text-xl font-bold" aria-label="選擇作品類型" @click="typeOpen = true">{{ typeTitle }}<ChevronDown :size="18" class="absolute top-1/2 left-full ml-1 -translate-y-1/2 text-muted" /></button>
     <!-- on the series tab the plus makes a series -->
-    <button v-if="libTab === 'series' && !tagName" class="absolute right-4 inline-flex size-10 items-center justify-center text-ink transition active:scale-90" aria-label="新增系列" title="新增系列" @click="newSeriesOpen = true"><Plus :size="24" /></button>
+    <button v-if="libTab === 'series' && !tagName" class="absolute right-4 inline-flex size-10 items-center justify-center text-ink transition active:scale-90" aria-label="新增系列" title="新增系列" @click="sync.guardEdit() && (newSeriesOpen = true)"><Plus :size="24" /></button>
     <RouterLink v-else to="/work/new" class="absolute right-4 inline-flex size-10 items-center justify-center text-ink transition active:scale-90" aria-label="新增作品" title="新增作品"><Plus :size="24" /></RouterLink>
     <PickSheet v-model:open="typeOpen" :model-value="typeValue" title="作品類型" :items="typeItems" @pick="pickType" />
     </template>
