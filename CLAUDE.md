@@ -31,7 +31,7 @@ UI 變更用 preview（`.claude/launch.json` 的 `dev`）驗證；`#/dev` 是元
 - `meta.ts`：作品類型（`DEFAULT_TYPES`、`allTypes/workTypes`、`typeLabel/typeUnit`）、狀態（`STATUSES`、`statusLabel`）、進度文字（`progressText/progressRatio`、每日進度 `progressLogParts`、偏快的日子 `spikeLogIds`；`fromToStart/startToFrom` 換算起點）。
 - `ratings.ts`：評分等級（檔位 0.5–5 ↔ 顯示分數；`scoreOf/starsOf/formatScore/formatRating`）。
 - `date.ts`：模糊日期運算與格式（`precision/within/earliest/latest/daysSpan/formatFuzzy/monthGrid…`）。
-- `filter.ts`：作品庫篩選（`LibraryFilter`、`matches`、`descendants`、`yearsOf`）。
+- `filter.ts`：作品庫篩選（`LibraryFilter`、`matches`、`descendants`、`yearsOf`、`creatorNames` 把作者／製作拆成單一名字）。
 - `seriesList.ts`：系列列表資料（`seriesRows`）。
 - `stats.ts`：統計（`rangeOf`、`itemsOf`、`summarize`、`eventsOf`、`dayCounts`、`heatWeeks`）。
 - `search.ts`：搜尋來源設定與呼叫 Worker（`searchWorks/fetchDetail/toWorkDraft/findExisting/sourcesFor`、`WORKER_URL`、`proxiedImage`）。
@@ -44,7 +44,7 @@ UI 變更用 preview（`.claude/launch.json` 的 `dev`）驗證；`#/dev` 是元
 ## 路由與畫面 `src/router/index.ts`、`src/views/`
 | 路由 | 檔案 | 備註 |
 |---|---|---|
-| `/` | `LibraryView` | 作品頁：搜尋、篩選、排序、時間軸/格狀、**作品／系列分頁**（系列用 `SeriesList`）、同步雲圖示 |
+| `/` | `LibraryView` | 作品頁：搜尋、篩選、排序、時間軸/格狀、**作品／系列分頁**（系列用 `SeriesList`）、同步雲圖示；`?tag=`／`?creator=` 是標籤／作者的作品清單 |
 | `/work/:id` | `WorkView` | 作品詳情：週目、評分、進度、心得/筆記 |
 | `/work/new`、`/work/:id/edit` | `WorkEditView` | 新增/編輯作品（`CoverSearchSheet` 搜尋封面） |
 | `/series/:id` | `SeriesView` | 系列頁：版型同作品頁（左側主圖，預設第一個作品的封面，可在編輯裡改選別的作品封面或自行上傳）、作品排序、系列標籤（套用到底下作品）、系列評分與總心得 |

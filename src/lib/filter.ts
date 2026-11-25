@@ -13,9 +13,14 @@ export interface LibraryFilter {
   unrated: boolean
   /** only works with a start or end date in this year ('2026'); '' = every year */
   year: string
+  /** only works by this author / maker (one name of the creators text); '' = anyone. Not counted by filterCount: it is what a creator's page lists */
+  creator: string
 }
 
-export const emptyFilter = (): LibraryFilter => ({ query: '', types: [], statuses: [], tagIds: [], categoryId: '', minRating: 0, unrated: false, year: '' })
+export const emptyFilter = (): LibraryFilter => ({ query: '', types: [], statuses: [], tagIds: [], categoryId: '', minRating: 0, unrated: false, year: '', creator: '' })
+
+/** the names in a creators text ("A、B", "A / B", "A, B"), so each one can be tapped */
+export const creatorNames = (creators?: string): string[] => [...new Set((creators ?? '').split(/\s*[、,，;；/／]\s*/).map((s) => s.trim()).filter(Boolean))]
 
 /** how many filters (besides the search text) are active */
 export const filterCount = (f: LibraryFilter) =>
@@ -40,6 +45,7 @@ export function matches(
   const { work, record } = item
   const q = f.query.trim().toLowerCase()
   if (q && ![work.title, work.originalTitle, work.creators].some((s) => s?.toLowerCase().includes(q))) return false
+  if (f.creator && !creatorNames(work.creators).includes(f.creator)) return false
   if (f.year && years && !years.has(f.year)) return false
   if (f.types.length && !f.types.includes(work.type)) return false
   if (f.statuses.length && !f.statuses.includes(record?.status ?? 'todo')) return false

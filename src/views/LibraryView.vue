@@ -56,12 +56,17 @@ if (!workTypes().some((t) => t.value === settings.s.libraryType)) settings.s.lib
 const f = ref({ ...emptyFilter(), types: settings.s.libraryType ? [settings.s.libraryType] : [] })
 /** a tag chip on a work page lands here with ?tag=: show everything carrying it */
 function applyQuery() {
-  const { tag, type } = route.query
+  const { tag, type, creator } = route.query
   // the tag is looked at within the type of the work it was tapped on
   if (typeof tag === 'string') f.value = { ...emptyFilter(), tagIds: [tag], types: typeof type === 'string' ? [type as WorkType] : [] }
+  // a creator's works across every type: the same maker often has a film and a book
+  else if (typeof creator === 'string' && creator) f.value = { ...emptyFilter(), creator }
 }
-/** on a tag's page the title is the tag, not a type */
-const tagName = computed(() => (typeof route.query.tag === 'string' ? (data.tags.find((t) => t.id === route.query.tag)?.name ?? '標籤') : ''))
+/** on a tag's or a creator's page the title is its name, not a type */
+const tagName = computed(() => {
+  if (typeof route.query.tag === 'string') return data.tags.find((t) => t.id === route.query.tag)?.name ?? '標籤'
+  return typeof route.query.creator === 'string' ? route.query.creator : ''
+})
 applyQuery()
 watch(() => route.query, applyQuery)
 const typeOpen = ref(false)
@@ -289,7 +294,7 @@ const ratingSteps = computed(() => [0, ...mergeRatings(settings.s.ratings).map((
       <button class="absolute right-4 inline-flex size-10 items-center justify-center text-ink transition active:scale-90" aria-label="完成" title="完成" @click="finishOrdering"><Check :size="24" /></button>
     </template>
     <template v-else>
-    <button v-if="route.query.tag" class="absolute left-4 inline-flex size-10 items-center justify-center text-muted transition active:scale-90" aria-label="返回" @click="router.back()"><ChevronLeft :size="24" /></button>
+    <button v-if="tagName" class="absolute left-4 inline-flex size-10 items-center justify-center text-muted transition active:scale-90" aria-label="返回" @click="router.back()"><ChevronLeft :size="24" /></button>
     <button v-else class="absolute left-4 inline-flex size-10 items-center justify-center text-muted transition active:scale-90" :aria-label="syncInfo.text" :title="syncInfo.text" @click="syncTap">
       <LoaderCircle v-if="sync.status === 'syncing'" :size="22" class="animate-spin" />
       <Cloud v-else :size="22" />
@@ -309,7 +314,7 @@ const ratingSteps = computed(() => [0, ...mergeRatings(settings.s.ratings).map((
   <div v-if="!ordering" class="mb-4 flex gap-2">
     <label class="input flex min-w-0 items-center gap-2">
       <Search :size="18" class="shrink-0 text-muted" />
-      <input v-model="f.query" class="min-w-0 flex-1 bg-transparent outline-none" placeholder="搜尋標題、作者" />
+      <input v-model="f.query" class="min-w-0 flex-1 bg-transparent outline-none" :placeholder="tagName ? '搜尋標題' : '搜尋標題、作者'" />
     </label>
     <button v-if="!tagName && libTab === 'works'" class="icon-btn size-12 shrink-0 rounded-2xl" :aria-label="NEXT_LABEL[view]" @click="settings.s.libraryView = NEXT[view]">
       <LayoutGrid v-if="view === 'timeline'" :size="18" />

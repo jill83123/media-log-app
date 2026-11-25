@@ -4,7 +4,8 @@ import { RouterLink, useRoute } from 'vue-router'
 import type { Progress, ProgressLog, Rec, WorkNote } from '@/db/types'
 import { earliest, formatFuzzy, formatSpan, latest, today } from '@/lib/date'
 import { uid } from '@/lib/id'
-import { fromToStart, progressLogParts, progressRatio, progressText, spikeLogIds, startToFrom, typeLabel } from '@/lib/meta'
+import { creatorNames } from '@/lib/filter'
+import { fromToStart,progressLogParts, progressRatio, progressText, spikeLogIds, startToFrom, typeLabel } from '@/lib/meta'
 import { formatRating } from '@/lib/ratings'
 import { useCover } from '@/lib/covers'
 import { logProgress, progressLogId, put, remove, removeRecord, setProgress, startNewRound } from '@/lib/repo'
@@ -40,6 +41,7 @@ watch(
   () => (roundId.value = ''),
 )
 
+const creators = computed(() => creatorNames(work.value?.creators))
 const tags = computed(() => {
   const ids = work.value ? data.tagIdsOf(work.value) : []
   return data.tags.filter((t) => ids.includes(t.id))
@@ -338,7 +340,10 @@ async function removeDay() {
       <div class="min-w-0 flex-1 self-end">
         <p class="mb-0.5 text-xs font-semibold text-muted">{{ typeLabel(work.type) }}</p>
         <h1 class="text-lg leading-snug font-bold">{{ work.title }}</h1>
-        <p v-if="work.creators" class="mt-0.5 text-xs text-muted">{{ work.creators }}</p>
+        <!-- each name opens the list of that author's / maker's works -->
+        <p v-if="work.creators" class="mt-0.5 text-xs text-muted">
+          <template v-for="(n, i) in creators" :key="n"><span v-if="i">、</span><RouterLink :to="{ path: '/', query: { creator: n } }">{{ n }}</RouterLink></template>
+        </p>
         <button v-if="scored" class="mt-1 flex items-center gap-1.5 text-sm font-semibold" :class="scored.rating == null && 'text-xs font-normal text-muted'" @click="rate(scored.id)"><RatingStars :value="scored.rating" :size="14" />{{ scored.rating == null ? '點此評分' : formatRating(scored.rating) }}</button>
         <div class="mt-2 flex flex-wrap gap-1.5">
           <RouterLink v-for="t in tags" :key="t.id" :to="{ path: '/', query: { tag: t.id, type: work.type } }" class="tag">{{ t.name }}</RouterLink>
