@@ -34,7 +34,7 @@ UI 變更用 preview（`.claude/launch.json` 的 `dev`）驗證；`#/dev` 是元
 - `filter.ts`：作品庫篩選（`LibraryFilter`、`matches`、`descendants`、`yearsOf`、`creatorNames` 把作者／製作拆成單一名字）。
 - `seriesList.ts`：系列列表資料（`seriesRows`）。
 - `stats.ts`：統計（`rangeOf`、`itemsOf`、`summarize`、`eventsOf`、`dayCounts`、`heatWeeks`）。
-- `search.ts`：搜尋來源設定與呼叫 Worker（`searchWorks/fetchDetail/toWorkDraft/findExisting/sourcesFor`、`WORKER_URL`、`proxiedImage`）。
+- `search.ts`：搜尋來源設定與呼叫 Worker（`searchWorks/fetchDetail/toWorkDraft/findExisting/sourcesFor`、`WORKER_URL`、`proxiedImage`；作者／製作的角色 `CREATOR_ROLES/rolesOf/defaultRoles/joinRoles`）。
 - `covers.ts`：封面解析（網址／本機／`drive:<id>` 下載）`useCover`；`image.ts` 壓縮上傳圖；`imageGc.ts` 清掉沒人引用的本機圖。
 - `reminders.ts` 算提醒時段；`push.ts` 瀏覽器端推播＋呼叫 Worker。
 - `themes.ts` 主題色；`chinese.ts` 簡→繁（opencc 延遲載入）；`updater.ts` PWA 更新提示；`demo.ts` 示範資料（DevView 用）。
@@ -59,7 +59,7 @@ UI 變更用 preview（`.claude/launch.json` 的 `dev`）驗證；`#/dev` 是元
 - 版面：`BottomSheet`（所有底部面板的底）、`PopupDialog`、`UiLayer`（toast+對話框容器，App 掛一次）、`PageHeader`、`PillTabs`。
 - 表單：`SelectField`、`PickSheet`、`NamePickSheet`（選/新建 標籤、分類、系列）、`CheckField`、`ToggleSwitch`、`FuzzyDateField`+`FuzzyDateSheet`、`TimePickerSheet`。
 - 作品相關：`WorkCover`、`StatusPill`、`RatingBadge/RatingStars/RatingList/RatingSheet`、`ProgressSheet`、`RecordSheet`（編輯週目）、`NoteSheet`（心得/筆記）、`SeriesList`。
-- `CoverSearchSheet`：線上查標題/封面/作者。
+- `CoverSearchSheet`：線上查標題/封面/作者／製作；先在彈出視窗搜尋，選了結果再開另一個彈出視窗逐項選要帶入的資料（編輯時預設全關）。
 
 ## Worker `worker/`（獨立部署，wrangler；CI 不含）
 `src/index.js` 路由（`/search`、`/detail`、`/img`、`/config`、`/token`、`/refresh`、`/revoke`、`/push*`）· `sources.js` 各來源解析器（純函式，`sources.test.js`）· `img.js` 防盜連圖片代理（白名單）· `push.js` Web Push 與排程提醒（Durable Object）· `scripts/`（`deploy.mjs`、`gen-vapid.mjs`、`sync-config.mjs`）。前端對應：`lib/search.ts`、`lib/google/gis.ts`、`lib/push.ts`、`public/push-sw.js`。

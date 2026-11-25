@@ -206,7 +206,7 @@ async function removeThis() {
     </ul>
   </PopupDialog>
   <CoverSearchSheet v-model:open="coverSearchOpen" cover-only :query="form.title" :type="form.type" @pick="applyFound" />
-  <CoverSearchSheet v-model:open="searchOpen" :query="form.title" :type="form.type" @pick="applyFound" />
+  <CoverSearchSheet v-model:open="searchOpen" :query="form.title" :type="form.type" :editing="!!editingId" @pick="applyFound" />
 
   <div class="mt-4 flex gap-3">
     <button v-if="editingId" class="btn btn-ghost shrink-0 px-3.5 text-sm text-danger" @click="removeThis">刪除</button>

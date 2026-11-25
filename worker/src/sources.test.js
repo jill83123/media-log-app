@@ -14,6 +14,25 @@ describe('Bangumi', () => {
     expect(creators('TV')).toBe('AIC')
     expect(creators('剧场版')).toBe('山田')
   })
+  it('gives an anime its studio, not the author of the original work', () => {
+    const creators = (infobox) => parseBangumi({ data: [{ id: 1, name: 'x', platform: 'TV', infobox }] })[0].creators
+    const base = [{ key: '原作', value: '山田鐘人' }, { key: '导演', value: '斎藤圭一郎' }]
+    expect(creators([...base, { key: '动画制作', value: 'MADHOUSE' }])).toBe('MADHOUSE')
+    // no studio listed: the director, and only then the original work
+    expect(creators(base)).toBe('斎藤圭一郎')
+    expect(creators([base[0]])).toBe('山田鐘人')
+  })
+  it('sends every role the page names, without the bracketed notes', () => {
+    const infobox = [
+      { key: '原作', value: '山田鐘人（小学馆「周刊少年Sunday」连载中）' },
+      { key: '导演', value: '斎藤圭一郎' },
+      { key: '动画制作', value: 'MADHOUSE' },
+      { key: '出版社', value: [{ v: '小学馆' }, { v: '东立' }] },
+    ]
+    const r = parseBangumi({ data: [{ id: 1, name: 'x', platform: 'TV', infobox }] })[0]
+    expect(r.roles).toEqual({ author: '山田鐘人', director: '斎藤圭一郎', studio: 'MADHOUSE', publisher: '小学馆、东立' })
+    expect(parseBangumi({ data: [{ id: 1, name: 'x', platform: 'TV', infobox: [] }] })[0].roles).toBeUndefined()
+  })
   it('derives the type from the platform', () => {
     expect(bgmType('TV')).toBe('anime')
     expect(bgmType('小说')).toBe('lightnovel')
@@ -85,9 +104,9 @@ describe('detail page', () => {
 })
 
 describe('slim', () => {
-  it('keeps only title, cover, creators, type and link', () => {
+  it('keeps only title, cover, creators, year, type and link', () => {
     const r = slim({ source: 'bangumi', id: '1', title: 'T', originalTitle: 'O', cover: 'c', creators: 'A', year: '2022', summary: 's', isbn: '9', type: 'manga', url: 'u' })
-    expect(r).toEqual({ source: 'bangumi', id: '1', title: 'T', cover: 'c', creators: 'A', type: 'manga', url: 'u' })
+    expect(r).toEqual({ source: 'bangumi', id: '1', title: 'T', cover: 'c', creators: 'A', year: '2022', type: 'manga', url: 'u' })
   })
 })
 
@@ -112,8 +131,8 @@ describe('巴哈姆特動畫瘋', () => {
   })
   it('prefers the producer over the director', () => {
     const li = (t, c) => `<li class="type"><span class="title">${t}</span><p class="content">${c}</p></li>`
-    expect(parseGamerDetail(li('導演監督', '金崎貴臣') + li('製作廠商', 'Studio五組'))).toEqual({ creators: 'Studio五組' })
-    expect(parseGamerDetail(li('導演監督', '金崎貴臣'))).toEqual({ creators: '金崎貴臣' })
+    expect(parseGamerDetail(li('導演監督', '金崎貴臣') + li('製作廠商', 'Studio五組'))).toEqual({ creators: 'Studio五組', roles: { director: '金崎貴臣', studio: 'Studio五組' } })
+    expect(parseGamerDetail(li('導演監督', '金崎貴臣'))).toEqual({ creators: '金崎貴臣', roles: { director: '金崎貴臣' } })
     expect(parseGamerDetail('')).toEqual({ creators: undefined })
   })
 })

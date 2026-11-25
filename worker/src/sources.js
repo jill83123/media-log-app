@@ -43,6 +43,13 @@ export function bgmType(platform = '', fallback) {
   if (/TV|WEB|OVA|OAD|动画/i.test(platform)) return 'anime'
   return fallback
 }
+/** a name as the site writes it, minus the bracketed notes ("山田鐘人（小學館連載中）" -> "山田鐘人") */
+const clean = (s) => s?.replace(/\s*[（(][^）)]*[）)]/g, '').trim() || undefined
+/** the roles that have a name, or undefined when none does: author (original work), director, studio, publisher */
+const rolesOf = (roles) => {
+  const out = Object.fromEntries(Object.entries(roles).flatMap(([k, v]) => (clean(v) ? [[k, clean(v)]] : [])))
+  return Object.keys(out).length ? out : undefined
+}
 export function parseBangumi(json, fallbackType) {
   return (json?.data ?? []).map((s) => {
     const info = Array.isArray(s.infobox) ? s.infobox : []
@@ -60,8 +67,16 @@ export function parseBangumi(json, fallbackType) {
       title: s.name_cn || s.name,
       originalTitle: s.name_cn ? s.name : undefined,
       cover: https(s.images?.common ?? s.images?.large),
-      // films lead with the director, everything else with the producer
-      creators: type === 'movie' ? pick('作者', '原作', '导演', '制作') : pick('作者', '原作', '制作', '导演'),
+      // everything the page names, so the app can let the user choose which to keep
+      roles: rolesOf({ author: pick('作者', '原作'), director: pick('导演'), studio: pick('动画制作', '制作'), publisher: pick('出版社') }),
+      // the text used when the app does not offer a choice: films lead with the director, books with the author; anime lead with the studio (动画制作), and the original work comes last
+      creators: clean(
+        type === 'movie'
+          ? pick('作者', '原作', '导演', '制作')
+          : isBookish(type)
+            ? pick('作者', '原作', '制作', '导演')
+            : pick('动画制作', '制作', '导演', '作者', '原作'),
+      ),
       year: year(s.date),
       summary: s.summary || undefined,
       type,
@@ -96,10 +111,10 @@ export function parseGamer(html) {
   }
   return out.slice(0, 15)
 }
-/** 製作廠商 first, 導演監督 when the page has none */
+/** 製作廠商 first, 導演監督 when the page has none; both are also sent as roles so the app can offer each */
 export function parseGamerDetail(html) {
   const field = (name) => stripTags(html.match(new RegExp(String.raw`<span class="title">${name}</span>\s*<p class="content">([\s\S]*?)</p>`))?.[1] ?? '') || undefined
-  return { creators: field('製作廠商') ?? field('導演監督') }
+  return { creators: field('製作廠商') ?? field('導演監督'), roles: rolesOf({ director: field('導演監督'), studio: field('製作廠商') }) }
 }
 async function gamer(q) {
   const res = await get(`https://ani.gamer.com.tw/search.php?keyword=${encodeURIComponent(q)}`)
@@ -256,7 +271,7 @@ async function openlibrary(q) {
 const IMPL = { bangumi, gamer, douban, books, bookwalker, goodreads, openlibrary }
 
 /** the parsers read more than the app wants (summary, year, ISBN…); only these fields are sent on */
-export const slim = (r) => ({ source: r.source, id: r.id, title: r.title, cover: r.cover, creators: r.creators, type: r.type, eps: r.eps, url: r.url })
+export const slim = (r) => ({ source: r.source, id: r.id, title: r.title, cover: r.cover, creators: r.creators, roles: r.roles, year: r.year, type: r.type, eps: r.eps, url: r.url })
 
 /** Runs the chosen sources at once; a source that fails is reported but does not stop the others. */
 export async function search(q, type, sources) {
@@ -301,11 +316,11 @@ export async function detail(source, id, url) {
     if (!res.ok) throw new Error(`upstream ${res.status}`)
     const s = await res.json()
     const [r] = parseBangumi({ data: [s] })
-    return { creators: r.creators, cover: r.cover }
+    return { creators: r.creators, roles: r.roles, cover: r.cover }
   }
   if (source === 'gamer') {
-    const { creators } = parseGamerDetail(await (await get(`https://ani.gamer.com.tw/animeRef.php?sn=${encodeURIComponent(id)}`)).text())
-    return { creators }
+    const { creators, roles } = parseGamerDetail(await (await get(`https://ani.gamer.com.tw/animeRef.php?sn=${encodeURIComponent(id)}`)).text())
+    return { creators, roles }
   }
   const u = new URL(url)
   if (!DETAIL_HOSTS.includes(u.hostname)) throw new Error('host not allowed')

@@ -5,10 +5,11 @@ import type { WorkType } from '@/db/types'
 import { BUILTIN_TYPE_IDS, workTypes } from '@/lib/meta'
 import { fileToCover } from '@/lib/image'
 import { traditional } from '@/lib/chinese'
-import { fetchDetail, needsProxy, proxiedImage, searchWorks, shownImage, SOURCE_LIST, sourcesFor, type SearchResult, type SourceId } from '@/lib/search'
+import { CREATOR_ROLES, defaultRoles, fetchDetail, joinRoles, needsProxy, proxiedImage, rolesOf, searchWorks, shownImage, SOURCE_LIST, sourcesFor, type CreatorRole, type CreatorRoles, type SearchResult, type SourceId } from '@/lib/search'
 import { useSettings } from '@/stores/settings'
 import { useUi } from '@/stores/ui'
 import { ChevronDown, LoaderCircle, Search, X } from '@/lib/uiIcons'
+import CheckField from '@/components/CheckField.vue'
 import PopupDialog from '@/components/PopupDialog.vue'
 import ToggleSwitch from '@/components/ToggleSwitch.vue'
 import WorkCover from '@/components/WorkCover.vue'
@@ -26,7 +27,8 @@ export interface Found {
 }
 
 /** coverOnly: tapping a result takes just its picture (to swap a cover that stopped loading) */
-const props = defineProps<{ query: string; type: WorkType | ''; coverOnly?: boolean }>()
+/** editing: the work already exists, so every part (title, names, episodes, cover) starts off and only what the user turns on is written */
+const props = defineProps<{ query: string; type: WorkType | ''; coverOnly?: boolean; editing?: boolean }>()
 const emit = defineEmits<{ pick: [found: Found] }>()
 const open = defineModel<boolean>('open', { required: true })
 const settings = useSettings()
@@ -81,12 +83,14 @@ async function run() {
     const r = await searchWorks(settings.workerUrl(), q, BUILTIN_TYPE_IDS.includes(kind.value) ? kind.value : '', sources, ctrl.signal)
     // Bangumi and Douban answer in Simplified Chinese: show and keep Traditional
     const conv = r.results.some((x) => x.source === 'bangumi' || x.source === 'douban') ? await traditional() : (t: string) => t
-    results.value = r.results.map((x) => (x.source === 'bangumi' || x.source === 'douban' ? { ...x, title: conv(x.title), creators: x.creators && conv(x.creators) } : x))
+    const convRoles = (roles?: CreatorRoles) => roles && (Object.fromEntries(Object.entries(roles).map(([k, v]) => [k, conv(v)])) as CreatorRoles)
+    results.value = r.results.map((x) => (x.source === 'bangumi' || x.source === 'douban' ? { ...x, title: conv(x.title), creators: x.creators && conv(x.creators), roles: convRoles(x.roles) } : x))
     errors.value = r.errors
   } catch (e) {
     if ((e as Error).name === 'AbortError') return
     results.value = []
-    errors.value = { all: (e as Error).message }
+    // a network failure is a TypeError whose text is the browser's English one ("Failed to fetch", "Load failed"): say it in Chinese
+    errors.value = { all: e instanceof TypeError ? '連不上搜尋服務，請檢查網路或搜尋服務網址。' : (e as Error).message }
   } finally {
     loading.value = false
   }
@@ -104,14 +108,28 @@ watch(open, (o) => {
 })
 
 /** the result that was tapped, waiting for the user to say which parts to take */
-const chosen = ref<{ title: string; cover?: string; creators?: string; eps?: number; ext: Record<string, string> } | null>(null)
-const take = ref({ title: true, creators: true, cover: true, total: true })
+const chosen = ref<{ title: string; cover?: string; roles: CreatorRoles; eps?: number; ext: Record<string, string> } | null>(null)
+const take = ref({ title: true, cover: true, total: true })
+/** which of the names (author, director, studio, publisher) are taken: only the author at first */
+const rolesOn = ref<CreatorRole[]>([])
+/** the roles the result has, in the fixed order */
+const roleRows = computed(() => CREATOR_ROLES.filter((k) => chosen.value?.roles[k.id]))
+function setRole(id: CreatorRole, on: boolean) {
+  rolesOn.value = on ? [...rolesOn.value, id] : rolesOn.value.filter((k) => k !== id)
+}
+/** the names shown under a result: the site's own text, else the one role that would be ticked first */
+const summary = (r: SearchResult) => {
+  const roles = rolesOf({ ...r, type: r.type ?? (kind.value || undefined) })
+  return r.creators || joinRoles(roles, defaultRoles(roles, r.type ?? kind.value))
+}
+/** year and episode count, when the site gives them */
+const meta = (r: SearchResult) => [r.year, r.eps ? `共 ${r.eps} 集` : ''].filter(Boolean).join(' · ')
 const titleDiffers = computed(() => !!chosen.value && chosen.value.title.trim() !== props.query.trim())
 
 async function pick(r: SearchResult) {
   picking.value = r.source + r.id
   // the list often lacks the author or cover; the detail page can fill them in
-  const more: Partial<SearchResult> = (props.coverOnly ? !r.cover : !r.creators || !r.cover) && r.url ? await fetchDetail(settings.workerUrl(), r).catch(() => ({})) : {}
+  const more: Partial<SearchResult> = (props.coverOnly ? !r.cover : !(r.creators || r.roles) || !r.cover) && r.url ? await fetchDetail(settings.workerUrl(), r).catch(() => ({})) : {}
   picking.value = ''
   if (props.coverOnly) {
     const url = r.cover || more.cover
@@ -125,8 +143,11 @@ async function pick(r: SearchResult) {
     return
   }
   const ext: Record<string, string> = r.source === 'openlibrary' ? {} : { [r.source]: r.id }
-  chosen.value = { title: r.title, cover: r.cover || more.cover, creators: r.creators || more.creators, eps: r.eps, ext }
-  take.value = { title: true, creators: true, cover: true, total: true }
+  const roles = rolesOf({ creators: r.creators || more.creators, roles: r.roles || more.roles, type: r.type ?? kind.value })
+  chosen.value = { title: r.title, cover: r.cover || more.cover, roles, eps: r.eps, ext }
+  take.value = props.editing ? { title: false, cover: false, total: false } : { title: true, cover: true, total: true }
+  // on a work that already exists nothing is ticked for the user, so what was set by hand is not written over
+  rolesOn.value = props.editing ? [] : defaultRoles(roles, r.type ?? kind.value)
 }
 /** a picture from a site that blocks hot-linking is fetched through the Worker and kept in the work itself */
 async function keepCover(url: string): Promise<string | undefined> {
@@ -151,7 +172,7 @@ async function apply() {
     total: take.value.total ? c.eps : undefined,
     title: take.value.title && titleDiffers.value ? c.title : undefined,
     cover,
-    creators: take.value.creators ? c.creators : undefined,
+    creators: joinRoles(c.roles, rolesOn.value) || undefined,
     ext: c.ext,
   })
   chosen.value = null
@@ -161,28 +182,38 @@ const saving = ref(false)
 </script>
 
 <template>
+  <!-- step 2: which parts of the chosen result to take -->
   <PopupDialog :model-value="!!chosen" no-focus above @update:model-value="chosen = null">
     <div v-if="chosen" class="card w-full max-w-[22rem] space-y-4 p-5 shadow-xl" role="dialog" aria-label="套用搜尋結果">
-      <div class="flex gap-3">
-        <WorkCover :src="shownImage(settings.workerUrl(), chosen.cover)" :title="chosen.title" no-cache class="h-20 w-14 shrink-0" />
-        <h2 class="min-w-0 flex-1 self-center text-base leading-snug font-bold">套用哪些資料？</h2>
-      </div>
-      <ul class="inset-divide">
+      <h2 class="text-base leading-snug font-bold">套用哪些資料？</h2>
+      <ul class="inset-divide -mt-2">
         <li v-if="titleDiffers" class="flex items-center gap-3 px-1 py-3">
-          <div class="min-w-0 flex-1"><p class="text-xs text-muted">標題</p><p class="truncate">{{ chosen.title }}</p></div>
+          <div class="min-w-0 flex-1"><p class="text-xs font-semibold tracking-wide text-muted">標題</p><p class="truncate">{{ chosen.title }}</p></div>
           <ToggleSwitch v-model="take.title" label="標題" />
         </li>
-        <li class="flex items-center gap-3 px-1 py-3">
-          <div class="min-w-0 flex-1"><p class="text-xs text-muted">作者／製作</p><p class="truncate" :class="!chosen.creators && 'text-muted'">{{ chosen.creators || '查不到' }}</p></div>
-          <ToggleSwitch v-model="take.creators" label="作者" :class="!chosen.creators && 'pointer-events-none opacity-40'" />
+        <!-- what the site gives for 作者／製作 (author, director, studio, publisher): a checkbox for each name to take -->
+        <li class="px-1 py-3">
+          <p class="text-xs font-semibold tracking-wide text-muted">作者／製作</p>
+          <p v-if="!roleRows.length" class="text-muted">查不到</p>
+          <div v-else class="mt-1.5 space-y-2" role="group" aria-label="帶入哪些名字">
+            <!-- label and name on one line, names lined up -->
+            <CheckField v-for="k in roleRows" :key="k.id" :model-value="rolesOn.includes(k.id)" @update:model-value="setRole(k.id, $event)">
+              <span class="inline-block w-8 align-baseline tracking-normal text-muted">{{ k.label }}</span>
+              <span class="text-sm leading-snug tracking-normal text-ink">{{ chosen.roles[k.id] }}</span>
+            </CheckField>
+          </div>
         </li>
         <li v-if="chosen.eps" class="flex items-center gap-3 px-1 py-3">
-          <div class="min-w-0 flex-1"><p class="text-xs text-muted">總集數</p><p>共 {{ chosen.eps }} 集</p></div>
+          <div class="min-w-0 flex-1"><p class="text-xs font-semibold tracking-wide text-muted">總集數</p><p>共 {{ chosen.eps }} 集</p></div>
           <ToggleSwitch v-model="take.total" label="總集數" />
         </li>
-        <li class="flex items-center gap-3 px-1 py-3">
-          <div class="min-w-0 flex-1"><p class="text-xs text-muted">封面</p><p :class="!chosen.cover && 'text-muted'">{{ chosen.cover ? '搜尋到的封面' : '查不到' }}</p></div>
-          <ToggleSwitch v-model="take.cover" label="封面" :class="!chosen.cover && 'pointer-events-none opacity-40'" />
+        <li class="px-1 py-3">
+          <div class="flex items-center gap-3">
+            <div class="min-w-0 flex-1"><p class="text-xs font-semibold tracking-wide text-muted">封面</p><p v-if="!chosen.cover" class="text-muted">查不到</p></div>
+            <ToggleSwitch v-model="take.cover" label="封面" :class="!chosen.cover && 'pointer-events-none opacity-40'" />
+          </div>
+          <!-- the picture itself under the title, only when the site has one -->
+          <WorkCover v-if="chosen.cover" :src="shownImage(settings.workerUrl(), chosen.cover)" :title="chosen.title" no-cache class="h-20 w-14" />
         </li>
       </ul>
       <div class="grid grid-cols-2 gap-2">
@@ -191,13 +222,15 @@ const saving = ref(false)
       </div>
     </div>
   </PopupDialog>
+  <!-- step 1: look the title up -->
   <PopupDialog v-model="open">
-   <div class="card flex max-h-[calc(var(--pop-h,100dvh)-3rem)] w-full max-w-[30rem] flex-col overflow-hidden p-0 shadow-xl" role="dialog" :aria-label="coverOnly ? '搜尋圖片' : '搜尋作品資料'">
+   <!-- a set height (up to what the screen allows), so the window does not jump or sit top-heavy as the results come and go -->
+   <div class="card flex h-[34rem] max-h-[calc(var(--pop-h,100dvh)-3rem)] w-full max-w-[30rem] flex-col overflow-hidden p-0 shadow-xl" role="dialog" :aria-label="coverOnly ? '搜尋圖片' : '搜尋作品資料'">
     <div class="flex items-center justify-between px-5 pt-4 pb-2">
       <h2 class="text-lg font-bold">{{ coverOnly ? '換一張圖片' : '搜尋作品資料' }}</h2>
       <button class="icon-btn -mr-2 border-0 bg-transparent text-muted" aria-label="關閉" @click="open = false"><X :size="18" /></button>
     </div>
-    <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pt-2 pb-5">
+    <div class="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-5 pt-2 pb-5">
     <div v-if="noWorker" class="flex flex-col items-center gap-1 px-4 py-8 text-center">
       <p class="font-semibold">尚未設定搜尋服務</p>
       <p class="text-sm text-muted">填入 Worker 網址後才能搜尋</p>
@@ -205,7 +238,7 @@ const saving = ref(false)
     </div>
     <template v-else>
       <!-- one row that scrolls sideways, so it stays a single quiet line above the box -->
-      <div v-drag-scroll class="scrollbar-none -mx-5 mb-3 flex gap-2 overflow-x-auto px-5 pb-1">
+      <div v-drag-scroll class="scrollbar-none -mx-5 mb-3 flex shrink-0 gap-2 overflow-x-auto px-5 pb-1">
         <button v-for="k in kinds" :key="k.value" type="button" class="chip shrink-0" :class="kind === k.value && 'chip-on'" @click="pickKind(k.value)">{{ k.label }}</button>
       </div>
       <form class="mb-3 flex gap-2" @submit.prevent="run">
@@ -219,14 +252,14 @@ const saving = ref(false)
         <span class="min-w-0 truncate">來源：{{ activeSources || '未開啟任何來源' }}</span>
         <RouterLink to="/settings/sources" class="shrink-0 text-primary" @click="open = false">設定</RouterLink>
       </p>
-      <p v-if="!kind && !searched && !loading" class="py-10 text-center text-sm text-muted">選好類型，輸入名稱後搜尋</p>
+      <p v-if="!kind && !searched && !loading" class="grid flex-1 place-items-center pb-16 text-center text-sm text-muted">選好類型，輸入名稱後搜尋</p>
       <div v-if="loading" class="grid place-items-center py-12 text-muted"><LoaderCircle :size="28" class="animate-spin" /></div>
       <template v-else>
         <p v-for="(msg, src) in errors" :key="src" class="mb-2 rounded-xl bg-warn/10 px-3 py-2 text-xs text-warn">
           {{ src === 'all' ? msg : `${sourceLabel(String(src))} 暫時無法使用（${msg}）` }}
         </p>
-        <!-- one fold per source, in the user's order, each with how many it found -->
-        <section v-for="g in groups" :key="g.id" class="mb-3">
+        <!-- one fold per source, in the user's order, each with how many it found; when the whole request failed there is nothing to fold -->
+        <section v-for="g in (errors.all ? [] : groups)" :key="g.id" class="mb-1">
           <button class="flex w-full items-center gap-2 px-1 py-2 text-left" :class="!g.items.length && 'opacity-50'" :aria-expanded="!isClosed(g)" @click="fold(g.id)">
             <ChevronDown :size="16" class="shrink-0 text-muted transition-transform" :class="isClosed(g) && '-rotate-90'" />
             <span class="text-sm font-semibold">{{ sourceLabel(g.id) }}</span>
@@ -235,10 +268,11 @@ const saving = ref(false)
           <ul v-if="!isClosed(g)" class="space-y-3">
             <li v-for="r in g.items" :key="r.source + r.id">
               <button class="card flex w-full gap-3 text-left transition active:scale-[0.99]" :disabled="!!picking" @click="pick(r)">
-                <WorkCover :src="shownImage(settings.workerUrl(), r.cover)" :title="r.title" no-cache class="h-24 w-16 shrink-0" />
+                <WorkCover :src="shownImage(settings.workerUrl(), r.cover)" :title="r.title" no-cache class="h-20 w-14 shrink-0" />
                 <div class="min-w-0 flex-1">
                   <p class="font-semibold">{{ r.title }}</p>
-                  <p v-if="r.creators" class="mt-1 text-xs text-muted">{{ r.creators }}</p>
+                  <p v-if="summary(r)" class="mt-1 text-xs text-muted">{{ summary(r) }}</p>
+                  <p v-if="meta(r)" class="mt-0.5 text-xs text-muted">{{ meta(r) }}</p>
                 </div>
                 <LoaderCircle v-if="picking === r.source + r.id" :size="18" class="animate-spin self-center text-muted" />
               </button>

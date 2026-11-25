@@ -13,12 +13,44 @@ export const SOURCE_LIST: { id: SourceId; label: string; hint: string }[] = [
 ]
 export const DEFAULT_SOURCES: SourceId[] = ['gamer', 'books', 'bookwalker', 'bangumi', 'douban', 'goodreads']
 
+/** what a name in "作者／製作" can be: the original author, the director, the animation studio, the publisher */
+export type CreatorRole = 'author' | 'director' | 'studio' | 'publisher'
+export const CREATOR_ROLES: { id: CreatorRole; label: string }[] = [
+  { id: 'author', label: '原作' },
+  { id: 'director', label: '導演' },
+  { id: 'studio', label: '製作' },
+  { id: 'publisher', label: '出版' },
+]
+export type CreatorRoles = Partial<Record<CreatorRole, string>>
+
+/** the roles of a result; a source that only gives one text has it taken as the director for films and shows, the author otherwise */
+export function rolesOf(r: { creators?: string; roles?: CreatorRoles; type?: string }): CreatorRoles {
+  if (r.roles && Object.keys(r.roles).length) return r.roles
+  if (!r.creators) return {}
+  return { [r.type === 'movie' || r.type === 'series' ? 'director' : 'author']: r.creators }
+}
+/** the roles switched on at first: the author (the director for films), else the first one there is; the rest start off */
+export function defaultRoles(roles: CreatorRoles, type?: string): CreatorRole[] {
+  const order: CreatorRole[] = type === 'movie' ? ['director', 'author', 'studio', 'publisher'] : ['author', 'director', 'studio', 'publisher']
+  const first = order.find((k) => roles[k])
+  return first ? [first] : []
+}
+/** the names of the switched-on roles as one text, each name once */
+export function joinRoles(roles: CreatorRoles, on: CreatorRole[]): string {
+  const names = CREATOR_ROLES.filter((k) => on.includes(k.id)).flatMap((k) => (roles[k.id] ?? '').split('、'))
+  return [...new Set(names.map((n) => n.trim()).filter(Boolean))].join('、')
+}
+
 export interface SearchResult {
   source: SourceId
   id: string
   title: string
   cover?: string
   creators?: string
+  /** every role the site names, when it says (Bangumi, 動畫瘋's detail page) */
+  roles?: CreatorRoles
+  /** the year it came out, when the site says */
+  year?: string
   type?: WorkType
   /** how many episodes the site says it has */
   eps?: number
