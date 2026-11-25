@@ -40,6 +40,20 @@ export default defineConfig({
         importScripts: ['push-sw.js'],
         globPatterns: ['**/*.{js,css,html,svg,ico,woff2}'],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
+        // covers of saved works hosted on other sites: kept on this device only (not synced), so each picture is fetched from its site once.
+        // Search-result pictures are not kept: WorkCover loads those with another referrer policy (noCache)
+        runtimeCaching: [
+          {
+            urlPattern: ({ request, sameOrigin }) => request.destination === 'image' && !sameOrigin && request.referrerPolicy === 'no-referrer',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'cover-images',
+              // 0 = opaque (cross-site <img> without CORS)
+              cacheableResponse: { statuses: [0, 200] },
+              expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 180, purgeOnQuotaError: true },
+            },
+          },
+        ],
       },
     }),
   ],

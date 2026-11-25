@@ -164,7 +164,7 @@ const saving = ref(false)
   <PopupDialog :model-value="!!chosen" no-focus above @update:model-value="chosen = null">
     <div v-if="chosen" class="card w-full max-w-[22rem] space-y-4 p-5 shadow-xl" role="dialog" aria-label="套用搜尋結果">
       <div class="flex gap-3">
-        <WorkCover :src="shownImage(settings.workerUrl(), chosen.cover)" :title="chosen.title" class="h-20 w-14 shrink-0" />
+        <WorkCover :src="shownImage(settings.workerUrl(), chosen.cover)" :title="chosen.title" no-cache class="h-20 w-14 shrink-0" />
         <h2 class="min-w-0 flex-1 self-center text-base leading-snug font-bold">套用哪些資料？</h2>
       </div>
       <ul class="inset-divide">
@@ -235,7 +235,7 @@ const saving = ref(false)
           <ul v-if="!isClosed(g)" class="space-y-3">
             <li v-for="r in g.items" :key="r.source + r.id">
               <button class="card flex w-full gap-3 text-left transition active:scale-[0.99]" :disabled="!!picking" @click="pick(r)">
-                <WorkCover :src="shownImage(settings.workerUrl(), r.cover)" :title="r.title" class="h-24 w-16 shrink-0" />
+                <WorkCover :src="shownImage(settings.workerUrl(), r.cover)" :title="r.title" no-cache class="h-24 w-16 shrink-0" />
                 <div class="min-w-0 flex-1">
                   <p class="font-semibold">{{ r.title }}</p>
                   <p v-if="r.creators" class="mt-1 text-xs text-muted">{{ r.creators }}</p>
