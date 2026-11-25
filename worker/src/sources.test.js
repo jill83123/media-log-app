@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bgmType, parseBangumi, slim, parseBooks, parseDetail, parseDoubanBooks, parseDoubanSuggest, parseGoodreads, parseOpenLibrary, parseGamer, parseBookWalker } from './sources.js'
+import { bgmType, parseBangumi, slim, parseBooks, parseDetail, parseDoubanBooks, parseDoubanSuggest, parseGoodreads, parseOpenLibrary, parseGamer, parseGamerDetail, parseBookWalker } from './sources.js'
 
 describe('Bangumi', () => {
   it('maps a subject to a result', () => {
@@ -7,6 +7,12 @@ describe('Bangumi', () => {
       data: [{ id: 462618, name: 'サイレント・ウィッチ', name_cn: 'Silent Witch', date: '2022-04-01', platform: '漫画', images: { common: 'http://lain.bgm.tv/a.jpg' }, infobox: [{ key: '作者', value: '依空まつり' }] }],
     })
     expect(r).toMatchObject({ source: 'bangumi', id: '462618', title: 'Silent Witch', originalTitle: 'サイレント・ウィッチ', year: '2022', type: 'manga', creators: '依空まつり', cover: 'https://lain.bgm.tv/a.jpg' })
+  })
+  it('leads with the producer, but with the director for films', () => {
+    const infobox = [{ key: '导演', value: '山田' }, { key: '制作', value: 'AIC' }]
+    const creators = (platform) => parseBangumi({ data: [{ id: 1, name: 'x', platform, infobox }] })[0].creators
+    expect(creators('TV')).toBe('AIC')
+    expect(creators('剧场版')).toBe('山田')
   })
   it('derives the type from the platform', () => {
     expect(bgmType('TV')).toBe('anime')
@@ -101,8 +107,14 @@ describe('巴哈姆特動畫瘋', () => {
     const html =
       "<div><a href='animeRef.php?sn=113826' class='theme-list-main' ><img class='theme-img lazyload' src='data:x' data-src='https://p2.bahamut.com.tw/B/ACG/c/67/0000140667.JPG' alt='x'><p class='theme-name'>Silent Witch 沉默魔女的祕密</p><p class='theme-time'>年份：2025/07</p><span class='theme-number'>\n共14集\n</span></a></div><a href='javascript:;' class='theme-list-main wish-card'>"
     expect(parseGamer(html)).toEqual([
-      { source: 'gamer', id: '113826', title: 'Silent Witch 沉默魔女的祕密', cover: 'https://p2.bahamut.com.tw/B/ACG/c/67/0000140667.JPG', type: 'anime', eps: 14, year: '2025' },
+      { source: 'gamer', id: '113826', title: 'Silent Witch 沉默魔女的祕密', cover: 'https://p2.bahamut.com.tw/B/ACG/c/67/0000140667.JPG', type: 'anime', eps: 14, year: '2025', url: 'https://ani.gamer.com.tw/animeRef.php?sn=113826' },
     ])
+  })
+  it('prefers the producer over the director', () => {
+    const li = (t, c) => `<li class="type"><span class="title">${t}</span><p class="content">${c}</p></li>`
+    expect(parseGamerDetail(li('導演監督', '金崎貴臣') + li('製作廠商', 'Studio五組'))).toEqual({ creators: 'Studio五組' })
+    expect(parseGamerDetail(li('導演監督', '金崎貴臣'))).toEqual({ creators: '金崎貴臣' })
+    expect(parseGamerDetail('')).toEqual({ creators: undefined })
   })
 })
 

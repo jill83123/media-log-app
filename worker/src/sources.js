@@ -53,16 +53,18 @@ export function parseBangumi(json, fallbackType) {
         if (Array.isArray(v)) return v.map((x) => x.v).join('、')
       }
     }
+    const type = bgmType(s.platform, fallbackType)
     return {
       source: 'bangumi',
       id: String(s.id),
       title: s.name_cn || s.name,
       originalTitle: s.name_cn ? s.name : undefined,
       cover: https(s.images?.common ?? s.images?.large),
-      creators: pick('作者', '原作', '导演', '制作'),
+      // films lead with the director, everything else with the producer
+      creators: type === 'movie' ? pick('作者', '原作', '导演', '制作') : pick('作者', '原作', '制作', '导演'),
       year: year(s.date),
       summary: s.summary || undefined,
-      type: bgmType(s.platform, fallbackType),
+      type,
       isbn: pick('ISBN'),
       eps: s.eps || s.total_episodes || undefined,
       url: `https://bgm.tv/subject/${s.id}`,
@@ -90,9 +92,14 @@ export function parseGamer(html) {
     if (!id || !title) continue
     const cover = block.match(/data-src='([^']+)'/)?.[1]
     const eps = Number(block.match(/共\s*(\d+)\s*集/)?.[1]) || undefined
-    out.push({ source: 'gamer', id, title, cover: https(cover), type: 'anime', eps, year: year(block.match(/年份：([^<]*)</)?.[1]) })
+    out.push({ source: 'gamer', id, title, cover: https(cover), type: 'anime', eps, year: year(block.match(/年份：([^<]*)</)?.[1]), url: `https://ani.gamer.com.tw/animeRef.php?sn=${id}` })
   }
   return out.slice(0, 15)
+}
+/** 製作廠商 first, 導演監督 when the page has none */
+export function parseGamerDetail(html) {
+  const field = (name) => stripTags(html.match(new RegExp(String.raw`<span class="title">${name}</span>\s*<p class="content">([\s\S]*?)</p>`))?.[1] ?? '') || undefined
+  return { creators: field('製作廠商') ?? field('導演監督') }
 }
 async function gamer(q) {
   const res = await get(`https://ani.gamer.com.tw/search.php?keyword=${encodeURIComponent(q)}`)
@@ -295,6 +302,10 @@ export async function detail(source, id, url) {
     const s = await res.json()
     const [r] = parseBangumi({ data: [s] })
     return { creators: r.creators, cover: r.cover }
+  }
+  if (source === 'gamer') {
+    const { creators } = parseGamerDetail(await (await get(`https://ani.gamer.com.tw/animeRef.php?sn=${encodeURIComponent(id)}`)).text())
+    return { creators }
   }
   const u = new URL(url)
   if (!DETAIL_HOSTS.includes(u.hostname)) throw new Error('host not allowed')
