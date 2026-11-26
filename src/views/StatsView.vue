@@ -18,12 +18,9 @@ const data = useData()
 /** one type at a time to begin with (the first in the user's order), so numbers and lists are not a mix of animes and novels */
 const settings = useSettings()
 /** shares the library's type pick, so choosing 小說 there shows 小說 here */
-const types = computed<WorkType[]>(() => {
-  const v = settings.s.libraryType || workTypes()[0]?.value
-  return v ? [v] : []
-})
+const types = computed<WorkType[]>(() => (settings.s.libraryType ? [settings.s.libraryType] : []))
 const tab = ref<'overview' | 'reviews'>('overview')
-const typeWorks = computed(() => data.works.filter((w) => types.value.includes(w.type)))
+const typeWorks = computed(() => (types.value.length ? data.works.filter((w) => types.value.includes(w.type)) : data.works))
 const rangeId = ref<RangeId>('year')
 const custom = ref({ from: '', to: '' })
 
@@ -38,8 +35,8 @@ const typeId = computed<string>({
   get: () => types.value[0] ?? '',
   set: (v) => (settings.s.libraryType = v as WorkType),
 })
-/** the stats are for one type at a time: there is no 全部作品 here */
-const typeItems = computed(() => workTypes(typeId.value).map((t) => ({ value: t.value as string, label: t.label })))
+/** 全部 first: the numbers are counts of works, so they add up across types */
+const typeItems = computed(() => [{ value: '', label: '全部' }, ...workTypes(typeId.value).map((t) => ({ value: t.value as string, label: t.label }))])
 /** a year of its own is one tap: every year older than last year that has something is listed, before 自訂 */
 const olderYears = computed(() => {
   const first = Math.min(...allEvents.value.map((e) => Number(e.date.slice(0, 4))).filter(Boolean))
@@ -82,7 +79,7 @@ watch(
 )
 const typeOpen = ref(false)
 const rangeOpen = ref(false)
-const typeTitle = computed(() => typeItems.value.find((t) => t.value === typeId.value)?.label ?? '統計')
+const typeTitle = computed(() => typeItems.value.find((t) => t.value === typeId.value)?.label ?? '全部')
 const rangeLabel = computed(() => {
   const { from, to } = custom.value
   if (rangeId.value === 'custom' && from && to) return from === to ? formatFuzzy(from) : `${formatFuzzy(from)} – ${formatFuzzy(to)}`

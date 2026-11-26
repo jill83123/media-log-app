@@ -50,8 +50,8 @@ function syncTap() {
   else if (sync.status !== 'syncing') void sync.syncNow()
 }
 const thisYear = today().slice(0, 4)
-/** the list is always of one type: a saved "everything" (or a type that is gone) falls back to the first one */
-if (!workTypes().some((t) => t.value === settings.s.libraryType)) settings.s.libraryType = workTypes()[0]?.value ?? ''
+/** '' = 全部 (every type); a type that is gone falls back to the first one */
+if (settings.s.libraryType && !workTypes().some((t) => t.value === settings.s.libraryType)) settings.s.libraryType = workTypes()[0]?.value ?? ''
 /** the list shows every year until one is picked */
 const f = ref({ ...emptyFilter(), types: settings.s.libraryType ? [settings.s.libraryType] : [] })
 /** a tag chip on a work page lands here with ?tag=: show everything carrying it */
@@ -75,9 +75,9 @@ applyQuery()
 watch(() => route.query, applyQuery)
 const typeOpen = ref(false)
 /** the title is the type picker; the last pick is remembered for next time */
-const typeItems = computed(() => workTypes(settings.s.libraryType).map((t) => ({ value: t.value, label: t.label })))
-const typeValue = computed(() => settings.s.libraryType)
-const typeTitle = computed(() => (settings.s.libraryType && allTypes().some((t) => t.value === settings.s.libraryType) ? typeLabel(settings.s.libraryType) : '作品'))
+const typeItems = computed(() => [{ value: '' as string, label: '全部' }, ...workTypes(settings.s.libraryType).map((t) => ({ value: t.value as string, label: t.label }))])
+const typeValue = computed(() => settings.s.libraryType as string)
+const typeTitle = computed(() => (settings.s.libraryType && allTypes().some((t) => t.value === settings.s.libraryType) ? typeLabel(settings.s.libraryType) : '全部'))
 function pickType(v: string) {
   settings.s.libraryType = v
   f.value.types = v ? [v] : []
