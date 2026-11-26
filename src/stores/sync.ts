@@ -23,6 +23,8 @@ export const useSync = defineStore('sync', () => {
   let version = 0
   /** true only during the first sync after opening the app: edits wait so they never land on stale local data */
   const startupLock = ref(false)
+  /** a sync the user started by hand is running: UiLayer shows a "同步中" toast for it */
+  const manualBusy = ref(false)
   const STARTUP_LOCK_MAX_MS = 6000
 
   /** call where an edit starts: false (with a toast) while the first sync is still running */
@@ -105,6 +107,7 @@ export const useSync = defineStore('sync', () => {
     running = (async () => {
       const startedAt = version
       status.value = 'syncing'
+      if (!quiet) manualBusy.value = true
       error.value = ''
       try {
         const t = await token(false)
@@ -139,6 +142,7 @@ export const useSync = defineStore('sync', () => {
         if (!quiet) ui.toast(error.value, 'error')
       } finally {
         running = null
+        manualBusy.value = false
         startupLock.value = false
       }
     })()
@@ -191,5 +195,5 @@ export const useSync = defineStore('sync', () => {
       ui.toast('已還原', 'success')
     })
 
-  return { status, error, startupLock, guardEdit, connected, init, connect, disconnect, syncNow, backups, backupBusy, loadBackups, backUpNow, restore }
+  return { status, error, startupLock, manualBusy, guardEdit, connected, init, connect, disconnect, syncNow, backups, backupBusy, loadBackups, backUpNow, restore }
 })

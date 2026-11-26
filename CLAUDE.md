@@ -21,7 +21,7 @@ UI 變更用 preview（`.claude/launch.json` 的 `dev`）驗證；`#/dev` 是元
 ## Stores `src/stores/`（Pinia）
 - `data.ts` `useData`：所有未刪除列的記憶體快取（works/series/records/notes/progressLogs/tags/categories）＋衍生 `workById`、`tagIdsOf`（作品標籤＋所屬系列標籤）、`tagUse`、`tagsByUse`、`latestRecord`、`library`（作品頁清單）。IndexedDB 變動會自動刷新。
 - `settings.ts` `useSettings`：本機設定 `s`（theme、themeColor、ratings、types、units、workerUrl、sourcesByType、libraryView、提醒…，存 localStorage）；`sharedValues/applyShared` 供同步共用設定（ratings、units、types）。
-- `sync.ts` `useSync`：Google 同步狀態與動作（connect/syncNow/備份/還原），開啟、變更後、離開時自動同步；開啟後第一次同步時 `startupLock` 期間可瀏覽但擋編輯（最多 6 秒，離線不擋；新增編輯入口要先 `guardEdit()`，編輯頁由路由守衛擋），同步中又有編輯會補同步一次。
+- `sync.ts` `useSync`：Google 同步狀態與動作（connect/syncNow/備份/還原），開啟、變更後、離開時自動同步；開啟後第一次同步時 `startupLock` 期間可瀏覽但擋編輯（最多 6 秒，離線不擋；新增編輯入口要先 `guardEdit()`，編輯頁由路由守衛擋），同步中又有編輯會補同步一次；`startupLock`／手動同步（`manualBusy`）時 UiLayer 顯示「同步中」吐司。
 - `push.ts` `usePush`：推播訂閱與提醒開關。
 - `ui.ts` `useUi`：toast、`confirm`/`prompt` 對話框（UiLayer 顯示）。
 

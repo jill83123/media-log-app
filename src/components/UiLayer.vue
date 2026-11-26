@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { LoaderCircle } from '@/lib/uiIcons'
+import { useSync } from '@/stores/sync'
 import { useUi } from '@/stores/ui'
 
 const ui = useUi()
+const sync = useSync()
 const inputEl = ref<HTMLInputElement>()
 
 // the on-screen keyboard only shrinks the visual viewport on iOS, so the dialog is centered in what is left above it
@@ -95,6 +98,15 @@ function submit() {
       class="pointer-events-none fixed inset-x-0 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-[70] flex flex-col items-center gap-2 px-4"
     >
       <TransitionGroup name="sheet">
+        <!-- first sync after opening: browsing is fine, edits are refused (sync.guardEdit) so they don't land on stale local data -->
+        <div
+          v-if="sync.startupLock || sync.manualBusy"
+          key="sync-lock"
+          class="flex max-w-md items-center gap-2 rounded-2xl bg-neutral-800 px-4 py-2.5 text-sm text-white shadow-lg"
+          aria-live="polite"
+        >
+          <LoaderCircle :size="16" class="animate-spin" />{{ sync.startupLock ? '同步中，完成後才能編輯' : '同步中' }}
+        </div>
         <div
           v-for="t in ui.toasts"
           :key="t.id"
