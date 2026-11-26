@@ -1,11 +1,18 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { LoaderCircle } from '@/lib/uiIcons'
 import { useSync } from '@/stores/sync'
-import { useUi } from '@/stores/ui'
+import { useUi, type Toast } from '@/stores/ui'
 
 const ui = useUi()
 const sync = useSync()
+
+// sync progress is shown as a regular toast (first sync after opening: browsing is fine, edits are refused by sync.guardEdit)
+type ToastItem = Omit<Toast, 'id'> & { id: number | string; loading?: boolean }
+const toastList = computed<ToastItem[]>(() => [
+  ...(sync.startupLock || sync.manualBusy ? [{ id: 'sync', text: '同步中', tone: 'info' as const, loading: true }] : []),
+  ...ui.toasts,
+])
 const inputEl = ref<HTMLInputElement>()
 
 // the on-screen keyboard only shrinks the visual viewport on iOS, so the dialog is centered in what is left above it
@@ -95,20 +102,11 @@ function submit() {
     </Transition>
 
     <div
-      class="pointer-events-none fixed inset-x-0 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-[70] flex flex-col items-center gap-2 px-4"
+      class="pointer-events-none fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-[70] flex flex-col items-center gap-2 px-4"
     >
       <TransitionGroup name="sheet">
-        <!-- first sync after opening: browsing is fine, edits are refused (sync.guardEdit) so they don't land on stale local data -->
         <div
-          v-if="sync.startupLock || sync.manualBusy"
-          key="sync-lock"
-          class="flex max-w-md items-center gap-2 rounded-2xl bg-neutral-800 px-4 py-2.5 text-sm text-white shadow-lg"
-          aria-live="polite"
-        >
-          <LoaderCircle :size="16" class="animate-spin" />{{ sync.startupLock ? '同步中，完成後才能編輯' : '同步中' }}
-        </div>
-        <div
-          v-for="t in ui.toasts"
+          v-for="t in toastList"
           :key="t.id"
           class="pointer-events-auto flex max-w-md items-center gap-3 rounded-2xl px-4 py-2.5 text-sm text-white shadow-lg"
           :class="{
@@ -117,11 +115,12 @@ function submit() {
             'bg-success': t.tone === 'success',
           }"
         >
+          <LoaderCircle v-if="t.loading" :size="16" class="animate-spin" />
           <span>{{ t.text }}</span>
           <button
-            v-if="t.action"
+            v-if="t.action && typeof t.id === 'number'"
             class="font-bold underline"
-            @click="(t.action.run(), ui.dismiss(t.id))"
+            @click="(t.action.run(), ui.dismiss(t.id as number))"
           >
             {{ t.action.label }}
           </button>
