@@ -52,11 +52,11 @@ export const STATUSES: { value: Status; label: string; tone: string }[] = [
 ]
 export const statusLabel = (s: Status) => STATUSES.find((x) => x.value === s)?.label ?? s
 
-/** "7%", "6 / 12 集", "12 集（連載中）" */
+/** "7%", "6/12 集", "12 集" (no spaces around the slash, one before the unit) */
 export function progressText(p: { current: number; total: number; unit: string; infinite: boolean }): string {
   const pct = p.unit === '%'
   if (p.infinite || !p.total) return pct ? `${p.current}%` : `${p.current} ${p.unit}`
-  return pct ? `${p.current}%` : `${p.current} / ${p.total} ${p.unit}`
+  return pct ? `${p.current}%` : `${p.current}/${p.total} ${p.unit}`
 }
 /**
  * A day's `from` is stored as where the round stood BEFORE the day (the previous day's end, so days chain), but it is shown

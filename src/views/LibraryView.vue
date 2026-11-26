@@ -375,7 +375,7 @@ const ratingSteps = computed(() => [0, ...mergeRatings(settings.s.ratings).map((
               <p class="truncate text-sm leading-tight font-medium">{{ work.title }}</p>
               <p v-if="metaLine(work, record, rounds)" class="mt-px text-xs leading-tight text-muted">{{ metaLine(work, record, rounds) }}</p>
               <div v-if="record?.status === 'doing' || record?.status === 'paused'" class="mt-0.5 flex h-3.5 items-center gap-2 text-xs leading-none text-muted">
-                <div v-if="progressRatio(record.progress)" class="h-1 max-w-28 min-w-0 flex-1 overflow-hidden rounded-full bg-line">
+                <div v-if="progressRatio(record.progress)" class="h-1 max-w-44 min-w-0 flex-1 overflow-hidden rounded-full bg-line">
                   <div class="h-full rounded-full" :class="record.status === 'paused' ? 'bg-warn' : 'bg-primary'" :style="{ width: `${progressRatio(record.progress) * 100}%` }" />
                 </div>
                 <span class="shrink-0">{{ progressText(record.progress) }}</span>
