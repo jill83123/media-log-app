@@ -1,6 +1,4 @@
 @import 'tailwindcss';
-@import '@fontsource-variable/inter';
-@import '@fontsource-variable/chiron-hei-hk';
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -36,10 +34,19 @@
   color-scheme: dark;
 }
 
+/* digits 0-9 only come from Inter: the Zev Hei TC web build has no tabular digits ("1" is much narrower than "0") */
+@font-face {
+  font-family: 'Digits';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('@fontsource-variable/inter/files/inter-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+30-39;
+}
+
 @theme inline {
   --font-sans:
-    'Inter Variable', 'Chiron Hei HK Variable', 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei',
-    system-ui, sans-serif;
+    'Digits', 'ZevHeiTC-N Web', 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif;
   --color-primary: var(--primary);
   --color-primary-soft: color-mix(in oklab, var(--primary) 12%, var(--surface));
   --color-primary-strong: color-mix(in oklab, var(--primary) 80%, var(--ink));
@@ -59,6 +66,8 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-sans);
+  /* Zev Hei TC: IDSP = extra spacing between Chinese characters, in 1/1000 em (0 = none, 20 = 2%); width stays at the default 100% */
+  font-variation-settings: 'IDSP' 0;
   font-variant-numeric: tabular-nums;
   -webkit-tap-highlight-color: transparent;
   /* scrolling only: no double-tap or pinch zoom by accident */

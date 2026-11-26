@@ -39,10 +39,21 @@ export default defineConfig({
         // reminder notifications sent by the Worker (see public/push-sw.js)
         importScripts: ['push-sw.js'],
         globPatterns: ['**/*.{js,css,html,svg,ico,woff2}'],
+        // the Chinese font is split into ~150 pieces (~26 MB): fetched on first use and then kept, not precached
+        globIgnores: ['fonts/**'],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         // covers of saved works hosted on other sites: kept on this device only (not synced), so each picture is fetched from its site once.
         // Search-result pictures are not kept: WorkCover loads those with another referrer policy (noCache)
         runtimeCaching: [
+          {
+            urlPattern: ({ sameOrigin, url }) => sameOrigin && url.pathname.includes('/fonts/zevheitc/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'app-fonts',
+              cacheableResponse: { statuses: [200] },
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 365 },
+            },
+          },
           {
             urlPattern: ({ request, sameOrigin }) => request.destination === 'image' && !sameOrigin && request.referrerPolicy === 'no-referrer',
             handler: 'CacheFirst',

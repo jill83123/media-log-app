@@ -69,6 +69,7 @@ UI 變更用 preview（`.claude/launch.json` 的 `dev`）驗證；`#/dev` 是元
 - **深淺色**：`<html>` 加 `.dark`；`--primary` 由 `settings.applyTheme` 依 `lib/themes.ts`（棕／藍，各有 light/dark 色）寫入。新增主題色＝在 `THEMES` 加一筆。
 - **背景近白，卡片靠細邊框＋極淡陰影區分**，不用灰底；陰影用 `--shadow` / `--shadow-lg`。
 - **共用 class（`@layer components`，先用它們再手寫 utility）**：`.card`、`.btn` + `.btn-primary|soft|ghost|danger|sm`、`.icon-btn`、`.circle-btn`、`.input`（16px 防 iOS 縮放，min-h-12）、`.label`、`.chip`/`.chip-on`、`.tag`、`.section-title`、`.sticky-header`（頁面標題）、`.empty-state`（空白頁文字置中）、`.inset-divide`（列表縮排分隔線）、`.scrollbar-none`。
+- **字型**：全站宙黑體 N 版（`ZevHeiTC-N Web`，英文也是它），檔案在 `public/fonts/zevheitc/`（約 150 個切片，由 `index.html` 的 `<link>` 載入，不在 PWA 預載，改走 `app-fonts` 快取）；數字 0–9 只用 Inter（`Digits`，因宙黑體網頁版沒有等寬數字）；字重預設 400、字寬 100%，`main.css` 用 `font-variation-settings: 'IDSP' 0` 控制漢字額外字距（0 = 不加，20 = 2%）。
 - **字級**：內文與可點元素 14px（`text-sm`），細字 12px（`text-xs`）；標題 `text-lg font-bold`。圓角 `rounded-2xl`（卡片/輸入/按鈕）、`rounded-xl`（小按鈕/列）、`rounded-full`（chip/pill）。觸控目標 ≥ 36–44px。
 - **手機優先**：最外層容器已在 `App.vue` 設好（`max-w-xl mx-auto px-4`、頂部 `--page-pt`），頁面不必重複；底部導覽 z-30、底部用 `env(safe-area-inset-bottom)`；高度用 `dvh`。
 - **層級 z-index**：頁內 sticky 10–20 → 下拉／底部導覽 30 → BottomSheet 40（`high` 時 65）→ 子彈窗 60（RecordSheet、SeriesView）→ PopupDialog 與 toast 70 → UiLayer 對話框 75（最上）。新浮層沿用此區間。
